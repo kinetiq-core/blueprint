@@ -148,7 +148,7 @@ export async function aggregate(flags: Record<string, string | boolean>): Promis
     },
     subfeatures: {
       title: 'Tracked Subfeatures',
-      headers: ['Source', 'Repository', 'Spec', 'Key', 'Subfeature', 'Surface', 'Status', 'Notes'],
+      headers: ['Source', 'Repository', 'Spec', 'Key', 'Subfeature', 'Surface', 'Status', 'Target', 'Delivered', 'Notes'],
       rows: subfeatureRows,
       csvFile: 'subfeatures.csv',
     },

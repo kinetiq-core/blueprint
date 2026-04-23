@@ -203,6 +203,8 @@ export function collectSpecTracking(specFiles: TrackingFile[]): TrackingResult {
         Subfeature: row.Subfeature || '',
         Surface: 'Mobile',
         Status: row.Status || '',
+        Target: row.Target || '',
+        Delivered: row.Delivered || '',
         Notes: row.Notes || '',
       })
     }
@@ -214,6 +216,8 @@ export function collectSpecTracking(specFiles: TrackingFile[]): TrackingResult {
         Subfeature: row.Subfeature || '',
         Surface: 'Web',
         Status: row.Status || '',
+        Target: row.Target || '',
+        Delivered: row.Delivered || '',
         Notes: row.Notes || '',
       })
     }
@@ -225,6 +229,8 @@ export function collectSpecTracking(specFiles: TrackingFile[]): TrackingResult {
         Subfeature: row.Subfeature || '',
         Surface: row.Surface || '',
         Status: row.Status || '',
+        Target: row.Target || '',
+        Delivered: row.Delivered || '',
         Notes: row.Notes || '',
       })
     }
@@ -266,7 +272,7 @@ export function collectSpecTracking(specFiles: TrackingFile[]): TrackingResult {
     releaseCsv: toCsv(['Spec', 'Area', 'Feature Group', 'Feature', 'Phase'], releaseRows),
     opsCsv: toCsv(['Spec', 'Area', 'Feature Group', 'Feature', 'Phase'], opsRows),
     futureCsv: toCsv(['Spec', 'Feature Group', 'Feature', 'Horizon', 'Notes'], futureRows),
-    subfeatureCsv: toCsv(['Spec', 'Key', 'Subfeature', 'Surface', 'Status', 'Notes'], subfeatureRows),
+    subfeatureCsv: toCsv(['Spec', 'Key', 'Subfeature', 'Surface', 'Status', 'Target', 'Delivered', 'Notes'], subfeatureRows),
     backlogCsv: toCsv(['Spec', 'Key', 'Type', 'Item', 'Status', 'Notes'], backlogRows),
   }
 }

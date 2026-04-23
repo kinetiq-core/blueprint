@@ -46,7 +46,7 @@ export function loadSpec(source, file) {
         url: specUrlFor(source.slug, normalizedRel),
         title: extractTitle(body, data, fallback),
         frontmatter: data,
-        hasSubfeatures: /^###\s+Subfeatures\s*$/m.test(body),
+        hasSubfeatures: /^###\s+(Mobile |Web )?Subfeatures\s*$/m.test(body),
         hasBacklog: /^###\s+Backlog\s*$/m.test(body),
     };
 }

@@ -44,7 +44,7 @@ type Snapshot = {
 
 type TableKey = 'mobile_features' | 'web_features' | 'backend' | 'release' | 'ops' | 'features_future' | 'subfeatures' | 'backlog'
 
-type SectionPageKey = 'index' | 'specs' | TableKey
+type SectionPageKey = 'index' | 'browse' | TableKey
 
 type Section = {
   slug: string
@@ -235,11 +235,20 @@ const LEGAL_NOTICE_HTML = `
   </p>
 </footer>`
 
+// In single-source mode the source-slug directory is dropped from URLs —
+// the mount path alone is already distinctive. Set after sections build.
+let SINGLE_SOURCE_MODE = false
+
+function sectionPrefix(sectionSlug: string) {
+  if (sectionSlug === 'root' || SINGLE_SOURCE_MODE) return ''
+  return `${sectionSlug}/`
+}
+
 function routeFor(sectionSlug: string, pageKey: 'search' | SectionPageKey) {
   if (pageKey === 'search') return 'search.html'
-  if (pageKey === 'specs') return `${sectionSlug}/specs/index.html`
+  if (pageKey === 'browse') return `${sectionPrefix(sectionSlug)}browse/index.html`
   if (sectionSlug === 'root' && pageKey === 'index') return 'index.html'
-  return `${sectionSlug}/${pageKey}.html`
+  return `${sectionPrefix(sectionSlug)}${pageKey}.html`
 }
 
 function csvRouteFor(sectionSlug: string, tableKey: TableKey) {
@@ -1198,6 +1207,14 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   .preview-cell-item { width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .preview-cell-phase { width: 78px; }
   .preview-cell-surfaces { width: 120px; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .preview-cell-status { width: 130px; }
+  .preview-cell-delivery { width: 120px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .rollup-bar-tight { width: 70px; }
+  .spec-status-cell { display: inline-flex; align-items: center; gap: 8px; }
+  .spec-status-count { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .spec-delivery-cell { font-variant-numeric: tabular-nums; }
+  .spec-delivery-arrow { color: var(--line); margin: 0 2px; }
+  .spec-delivery-delivered { color: var(--ink); }
   .preview-empty { color: var(--muted); opacity: 0.5; }
   .type-badge {
     display: inline-block;
@@ -1568,6 +1585,7 @@ ensureDir(join(OUTPUT_DIR, 'data'))
 
 const snapshot = JSON.parse(readFileSync(SNAPSHOT_PATH, 'utf8')) as Snapshot
 const sections = buildSections(snapshot)
+SINGLE_SOURCE_MODE = snapshot.sources.filter((s) => s.status === 'ok').length <= 1
 
 const sourceHandles: SourceHandle[] = snapshot.sources
   .filter((s) => s.status === 'ok')
@@ -1583,6 +1601,18 @@ const allSpecs: SpecMeta[] = []
 for (const handle of sourceHandles) {
   const files = collectSpecFiles(handle.id, handle.resolvedRoot)
   for (const file of files) allSpecs.push(loadSpec(handle, file))
+}
+
+// In single-source mode, simplify per-spec URLs: drop the source-slug
+// directory, and strip the redundant leading `specs/` segment (which
+// just names the docs/specs/ source directory).
+if (SINGLE_SOURCE_MODE) {
+  for (const spec of allSpecs) {
+    const parts = spec.url.split('/')
+    if (parts[0] === spec.sourceSlug) parts.shift()
+    if (parts[0] === 'specs') parts.shift()
+    spec.url = parts.join('/')
+  }
 }
 const specIndex = buildSpecIndex(allSpecs, sourceHandles)
 
@@ -1600,11 +1630,22 @@ for (const spec of allSpecs) {
   specPathToTitle.set(spec.specPath, spec.title)
 }
 
-// Precompute a 'best bucket' per spec from its subfeature rows — the v3
-// replacement for the old roadmap_mobile/_web surface-state rollup that
-// used to drive folder progress bars.
+// Precompute per-spec delivery stats from subfeature rows: the best bucket
+// drives folder rollup bars, and the counts + Target/Delivered version sets
+// drive the Status / Delivery columns on the filterable browser.
 type SpecBucket = 'shipped' | 'beta' | 'alpha' | 'planned' | 'parked'
+type SpecStats = {
+  bucket: SpecBucket | null
+  done: number
+  inProgress: number
+  planned: number
+  parked: number
+  total: number
+  targets: Set<string>
+  delivered: Set<string>
+}
 const specBucketByPath = new Map<string, SpecBucket>()
+const specStatsByPath = new Map<string, SpecStats>()
 {
   const rank: Record<SpecBucket, number> = { shipped: 4, beta: 3, alpha: 2, planned: 1, parked: 0 }
   const subfeatureStatusToBucket = (status: string): SpecBucket | null => {
@@ -1616,14 +1657,57 @@ const specBucketByPath = new Map<string, SpecBucket>()
     if (v === 'deferred' || v === 'parked') return 'parked'
     return null
   }
+  const getStats = (key: string): SpecStats => {
+    let s = specStatsByPath.get(key)
+    if (!s) {
+      s = { bucket: null, done: 0, inProgress: 0, planned: 0, parked: 0, total: 0, targets: new Set(), delivered: new Set() }
+      specStatsByPath.set(key, s)
+    }
+    return s
+  }
+  const normalizeVersion = (v: string) => v.replace(/\s*\([^)]*\)\s*$/, '').trim()
   for (const row of snapshot.tables.subfeatures?.rows || []) {
     const bucket = subfeatureStatusToBucket(String(row.Status || ''))
-    if (!bucket) continue
-    const existing = specBucketByPath.get(row.Spec)
-    if (!existing || rank[bucket] > rank[existing]) {
-      specBucketByPath.set(row.Spec, bucket)
+    const stats = getStats(row.Spec)
+    stats.total += 1
+    if (bucket === 'shipped') stats.done += 1
+    else if (bucket === 'alpha' || bucket === 'beta') stats.inProgress += 1
+    else if (bucket === 'planned') stats.planned += 1
+    else if (bucket === 'parked') stats.parked += 1
+
+    const target = normalizeVersion(String(row.Target || ''))
+    if (target && target !== '—' && target !== '-') stats.targets.add(target)
+    const delivered = normalizeVersion(String(row.Delivered || ''))
+    if (delivered && delivered !== '—' && delivered !== '-') stats.delivered.add(delivered)
+
+    if (bucket) {
+      const existing = specBucketByPath.get(row.Spec)
+      if (!existing || rank[bucket] > rank[existing]) {
+        specBucketByPath.set(row.Spec, bucket)
+      }
     }
   }
+  for (const [key, s] of specStatsByPath) {
+    s.bucket = specBucketByPath.get(key) || null
+  }
+}
+
+function renderSpecStatusCell(stats: SpecStats | undefined): string {
+  if (!stats || stats.total === 0) return '<span class="preview-empty">—</span>'
+  const seg = (n: number, cls: string) =>
+    n > 0 ? `<span class="rollup-seg ${cls}" style="width:${(n / stats.total) * 100}%"></span>` : ''
+  const bar = `<span class="rollup-bar rollup-bar-tight">${seg(stats.done, 'shipped')}${seg(stats.inProgress, 'alpha')}${seg(stats.planned, 'planned')}</span>`
+  return `<span class="spec-status-cell">${bar}<span class="spec-status-count">${stats.done}/${stats.total}</span></span>`
+}
+
+function renderSpecDeliveryCell(stats: SpecStats | undefined): string {
+  if (!stats || stats.total === 0) return '<span class="preview-empty">—</span>'
+  const sortV = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+  const targets = [...stats.targets].sort(sortV)
+  const delivered = [...stats.delivered].sort(sortV)
+  const targetStr = targets.length === 0 ? '—' : targets.length === 1 ? targets[0] : `${targets[0]}…${targets[targets.length - 1]}`
+  const deliveredStr = delivered.length === 0 ? '—' : delivered[delivered.length - 1]
+  return `<span class="spec-delivery-cell"><span class="spec-delivery-target">${escHtml(targetStr)}</span> <span class="spec-delivery-arrow">→</span> <span class="spec-delivery-delivered">${escHtml(deliveredStr)}</span></span>`
 }
 
 for (const section of sections) {
@@ -1632,9 +1716,9 @@ for (const section of sections) {
     : allSpecs
   if (specsForSection.length > 0) {
     const specsPage = {
-      key: 'specs' as const,
+      key: 'browse' as const,
       label: 'Specs',
-      href: routeFor(section.slug, 'specs'),
+      href: routeFor(section.slug, 'browse'),
     }
     const hasOverview = section.pages.some((p) => p.key === 'index')
     if (hasOverview) {
@@ -1666,12 +1750,14 @@ const searchIndex = [
 ]
 
 for (const section of sections) {
-  ensureDir(join(OUTPUT_DIR, section.slug))
+  // In single-source mode nothing is written under the section slug dir
+  // (Overview, tables, and the filterable browser all live at the root).
+  if (!SINGLE_SOURCE_MODE) ensureDir(join(OUTPUT_DIR, section.slug))
 
   const sectionCards = section.pages
     .filter((page) => page.key !== 'index')
     .map((page) => {
-      if (page.key === 'specs') {
+      if (page.key === 'browse') {
         const specs = section.source
           ? specsBySource.get(section.source.id) || []
           : allSpecs
@@ -1789,7 +1875,7 @@ for (const section of sections) {
   }
 
   for (const page of section.pages) {
-    if (page.key === 'index' || page.key === 'specs') continue
+    if (page.key === 'index' || page.key === 'browse') continue
     const table = snapshot.tables[page.key as TableKey]
     if (!table) continue
     const rows = sectionRows(section, table)
@@ -1948,7 +2034,7 @@ for (const spec of allSpecs) {
   const outPath = join(OUTPUT_DIR, spec.url)
   ensureDir(dirname(outPath))
 
-  const backToSpecsHref = routeFor(spec.sourceSlug, 'specs')
+  const backToSpecsHref = routeFor(spec.sourceSlug, 'browse')
   const backToSectionHref = routeFor(spec.sourceSlug, 'index')
 
   const pathSegments = spec.relPath.split('/').filter(Boolean)
@@ -1981,7 +2067,7 @@ for (const spec of allSpecs) {
     <section class="panel content">${rendered.html}</section>
   `
 
-  writeFileSync(outPath, pageShell(`${rendered.title} — ${spec.sourceLabel}`, sections, spec.sourceSlug, 'specs', specBody, spec.url))
+  writeFileSync(outPath, pageShell(`${rendered.title} — ${spec.sourceLabel}`, sections, spec.sourceSlug, 'browse', specBody, spec.url))
 
   searchIndex.push({
     title: rendered.title,
@@ -2247,6 +2333,8 @@ function renderPreviewLeaf(spec: SpecMeta, isChild: boolean): string {
     <span class="preview-cell preview-cell-item" title="${escAttr(row.item)}">${row.item ? escHtml(row.item) : '<span class="preview-empty">—</span>'}</span>
     <span class="preview-cell preview-cell-phase">${statusCell(row.phase)}</span>
     <span class="preview-cell preview-cell-surfaces">${row.surfaces ? escHtml(row.surfaces) : '<span class="preview-empty">—</span>'}</span>
+    <span class="preview-cell preview-cell-status">${renderSpecStatusCell(specStatsByPath.get(spec.specPath))}</span>
+    <span class="preview-cell preview-cell-delivery">${renderSpecDeliveryCell(specStatsByPath.get(spec.specPath))}</span>
     ${anchorsCell}
   </div>`
 }
@@ -2354,7 +2442,7 @@ const PREVIEW_SCRIPT = `
 </script>`
 
 for (const section of sections) {
-  const hasSpecsPage = section.pages.some((p) => p.key === 'specs')
+  const hasSpecsPage = section.pages.some((p) => p.key === 'browse')
   if (!hasSpecsPage) continue
 
   const specs = section.source
@@ -2370,7 +2458,7 @@ for (const section of sections) {
     insertSpec(previewRoot, [...prefix, ...folderSegments], spec)
   }
 
-  const indexUrl = routeFor(section.slug, 'specs')
+  const indexUrl = routeFor(section.slug, 'browse')
   const specsCrumbs = renderBreadcrumbs([
     { label: 'Roadmaps', href: 'index.html' },
     { label: section.label, href: routeFor(section.slug, 'index') },
@@ -2399,6 +2487,8 @@ for (const section of sections) {
       <span class="preview-cell preview-cell-item">Item</span>
       <span class="preview-cell preview-cell-phase">Phase</span>
       <span class="preview-cell preview-cell-surfaces">Surfaces</span>
+      <span class="preview-cell preview-cell-status">Status</span>
+      <span class="preview-cell preview-cell-delivery">Delivery</span>
       <span class="preview-anchors-spacer" aria-hidden="true"></span>
     </div>`
 
@@ -2421,7 +2511,7 @@ for (const section of sections) {
 
   const indexPath = join(OUTPUT_DIR, indexUrl)
   ensureDir(dirname(indexPath))
-  writeFileSync(indexPath, pageShell(`${section.label} — Specs`, sections, section.slug, 'specs', indexBody, indexUrl))
+  writeFileSync(indexPath, pageShell(`${section.label} — Specs`, sections, section.slug, 'browse', indexBody, indexUrl))
 
   searchIndex.push({
     title: `${section.label} — Specs`,
@@ -2453,7 +2543,7 @@ function buildRootBreakdown(): string {
         insertSpec(tree, folderSegments, spec)
       }
 
-      const browserHref = routeFor(section.slug, 'specs')
+      const browserHref = routeFor(section.slug, 'browse')
       const link = (q: string, inner: string) =>
         `<a class="breakdown-row" href="${browserHref}?q=${encodeURIComponent(q)}">${inner}</a>`
 
