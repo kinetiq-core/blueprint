@@ -1,0 +1,52 @@
+{
+  "name": "@kinetiq-core/blueprint",
+  "version": "0.0.1",
+  "description": "Living specs as the IP layer. A git-native toolchain for spec-driven development with release-aware lifecycle tracking.",
+  "keywords": [
+    "specs",
+    "specifications",
+    "documentation",
+    "blueprint",
+    "living-docs",
+    "docs-as-code",
+    "roadmap",
+    "adr",
+    "rfc",
+    "spec-driven-development"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "blueprint": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "marked": "^17.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kinetiq-core/blueprint.git"
+  },
+  "homepage": "https://github.com/kinetiq-core/blueprint#readme",
+  "bugs": {
+    "url": "https://github.com/kinetiq-core/blueprint/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

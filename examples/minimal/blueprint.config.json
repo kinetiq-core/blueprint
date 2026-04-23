@@ -1,0 +1,14 @@
+{
+  "sources": [
+    {
+      "id": "example",
+      "label": "Example Source",
+      "root": "."
+    }
+  ],
+  "paths": {
+    "mirror": "docs/specs-mirror",
+    "generated": "docs/generated",
+    "output": "docs_public"
+  }
+}
