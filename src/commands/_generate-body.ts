@@ -44,7 +44,7 @@ type Snapshot = {
 
 type TableKey = 'mobile_features' | 'web_features' | 'backend' | 'release' | 'ops' | 'features_future' | 'subfeatures' | 'backlog'
 
-type SectionPageKey = 'index' | 'browse' | TableKey
+type SectionPageKey = 'index' | 'browse' | 'table' | TableKey
 
 type Section = {
   slug: string
@@ -247,6 +247,7 @@ function sectionPrefix(sectionSlug: string) {
 function routeFor(sectionSlug: string, pageKey: 'search' | SectionPageKey) {
   if (pageKey === 'search') return 'search.html'
   if (pageKey === 'browse') return `${sectionPrefix(sectionSlug)}browse/index.html`
+  if (pageKey === 'table') return `${sectionPrefix(sectionSlug)}table/index.html`
   if (sectionSlug === 'root' && pageKey === 'index') return 'index.html'
   return `${sectionPrefix(sectionSlug)}${pageKey}.html`
 }
@@ -1166,6 +1167,18 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     cursor: pointer;
   }
   .preview-reset:hover { color: var(--ink); border-color: var(--ink); }
+  .preview-toggle-all {
+    padding: 6px 14px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .preview-toggle-all:hover { color: var(--ink); border-color: var(--ink); }
   .preview-count {
     margin-left: auto;
     font-size: 12px;
@@ -1208,6 +1221,39 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   .preview-cell-delivery { width: 120px; font-size: 11px; color: var(--muted); white-space: nowrap; }
   .preview-cell-backlog { width: 130px; }
   .rollup-bar-tight { width: 70px; }
+
+  /* Flat-table variant (Specs (table) page) */
+  .spec-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .spec-table thead th {
+    text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--line); white-space: nowrap;
+    background: var(--sidebar-bg);
+  }
+  .spec-table tbody td {
+    padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle;
+  }
+  .spec-table tbody tr:hover { background: rgba(47, 124, 122, 0.04); }
+  .spec-table .spec-table-path {
+    color: var(--muted); font-size: 11px; white-space: nowrap;
+    max-width: 240px; overflow: hidden; text-overflow: ellipsis;
+  }
+  .spec-table .spec-table-spec a {
+    color: var(--ink); text-decoration: none; font-weight: 600;
+  }
+  .spec-table .spec-table-spec a:hover { color: var(--secondary); }
+  .spec-table .spec-table-file {
+    display: block; color: var(--muted); font-size: 11px; margin-top: 2px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .spec-table .spec-table-item {
+    color: var(--ink); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .spec-table .spec-table-delivery { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .spec-table tr.filtered-out { display: none; }
+  @media (max-width: 960px) {
+    .spec-table .spec-table-item, .spec-table .spec-table-path { display: none; }
+  }
   .spec-status-cell { display: inline-flex; align-items: center; gap: 8px; }
   .spec-status-count { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .spec-delivery-cell { font-variant-numeric: tabular-nums; }
@@ -1754,12 +1800,17 @@ for (const section of sections) {
       label: 'Specs',
       href: routeFor(section.slug, 'browse'),
     }
+    const tablePage = {
+      key: 'table' as const,
+      label: 'Specs (table)',
+      href: routeFor(section.slug, 'table'),
+    }
     const hasOverview = section.pages.some((p) => p.key === 'index')
     if (hasOverview) {
-      section.pages.push(specsPage)
+      section.pages.push(specsPage, tablePage)
     } else {
       // No Overview in this mode — Specs becomes the section's entry page.
-      section.pages.unshift(specsPage)
+      section.pages.unshift(specsPage, tablePage)
     }
   }
 }
@@ -2446,6 +2497,17 @@ const PREVIEW_SCRIPT = `
     apply();
   });
 
+  var toggleBtn = root.querySelector('.preview-toggle-all');
+  if (toggleBtn) {
+    var allFolders = root.querySelectorAll('details.spec-tree-folder');
+    toggleBtn.addEventListener('click', function () {
+      var expanded = toggleBtn.dataset.state === 'expanded';
+      allFolders.forEach(function (d) { d.open = !expanded; });
+      toggleBtn.dataset.state = expanded ? 'collapsed' : 'expanded';
+      toggleBtn.textContent = expanded ? 'Expand all' : 'Collapse all';
+    });
+  }
+
   var params = new URLSearchParams(window.location.search);
   var initialQ = params.get('q');
   if (initialQ && searchInput) {
@@ -2486,6 +2548,7 @@ for (const section of sections) {
       <input type="text" class="preview-search" placeholder="Filter by title, path, item…" />
       ${renderFilterSelect('type', 'Type', typeValues)}
       <button type="button" class="preview-reset">Reset</button>
+      <button type="button" class="preview-toggle-all" data-state="expanded">Collapse all</button>
       <span class="preview-count"><span class="preview-count-visible">${specs.length} of ${specs.length}</span> specs</span>
     </div>`
 
@@ -2527,6 +2590,80 @@ for (const section of sections) {
     group: 'Specs',
     snippet: `Specs browser with ${specs.length} specs — search, filter by type, and jump to each spec.`,
     url: indexUrl,
+  })
+
+  // ---- Table view (flat list, same data) ----
+  const tableUrl = routeFor(section.slug, 'table')
+  const tableHeading = SINGLE_SOURCE_MODE ? 'Specs (table)' : `${section.label} — Specs (table)`
+  const tableCrumbs = renderBreadcrumbs([
+    { label: 'Roadmaps', href: 'index.html' },
+    { label: section.label, href: routeFor(section.slug, 'index') },
+    { label: 'Specs (table)' },
+  ])
+  const specRowsSorted = specs.slice().sort((a, b) => a.relPath.localeCompare(b.relPath))
+  const tableRows = specRowsSorted
+    .map((spec) => {
+      const row = extractPreviewRow(spec.frontmatter)
+      const filename = spec.relPath.split('/').pop() || spec.relPath
+      let segments = spec.relPath.split('/').filter(Boolean)
+      if (segments[0] === 'specs') segments = segments.slice(1)
+      const folderSegs = segments.slice(0, -1)
+      const pathLabel = folderSegs.join(' › ')
+      const searchText = [spec.title, spec.relPath, row.group, row.item].filter(Boolean).join(' ').toLowerCase()
+      return `<tr class="preview-row spec-table-row" data-search="${escAttr(searchText)}" data-type="${escAttr(row.type || '—')}">
+        <td class="spec-table-path" title="${escAttr(folderSegs.join('/'))}">${escHtml(pathLabel)}</td>
+        <td class="spec-table-spec"><a href="${escHtml(spec.url)}">${escHtml(spec.title)}</a><span class="spec-table-file">${escHtml(filename)}</span></td>
+        <td class="spec-table-type">${row.type ? `<span class="type-badge type-${escAttr(row.type)}">${escHtml(row.type)}</span>` : '<span class="preview-empty">—</span>'}</td>
+        <td class="spec-table-item" title="${escAttr(row.item)}">${row.item ? escHtml(row.item) : '<span class="preview-empty">—</span>'}</td>
+        <td class="spec-table-status">${renderSpecStatusCell(specStatsByPath.get(spec.specPath))}</td>
+        <td class="spec-table-delivery">${renderSpecDeliveryCell(specStatsByPath.get(spec.specPath))}</td>
+        <td class="spec-table-backlog">${renderSpecBacklogCell(specBacklogStatsByPath.get(spec.specPath))}</td>
+      </tr>`
+    })
+    .join('')
+  const tableFilterBar = `
+    <div class="preview-controls">
+      <input type="text" class="preview-search" placeholder="Filter by title, path, item…" />
+      ${renderFilterSelect('type', 'Type', typeValues)}
+      <button type="button" class="preview-reset">Reset</button>
+      <span class="preview-count"><span class="preview-count-visible">${specs.length} of ${specs.length}</span> specs</span>
+    </div>`
+  const tableBody = `
+    <section class="hero">
+      <div class="eyebrow">Kinetiq Core</div>
+      ${tableCrumbs}
+      <h1>${escHtml(tableHeading)}</h1>
+      <p class="subhead">Flat table of ${specs.length} spec${specs.length === 1 ? '' : 's'}. Same data as the tree browser; sorted by folder path.</p>
+    </section>
+    <section class="panel" id="specs-preview-root">
+      ${tableFilterBar}
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th class="spec-table-path">Path</th>
+            <th class="spec-table-spec">Spec</th>
+            <th class="spec-table-type">Type</th>
+            <th class="spec-table-item">Item</th>
+            <th class="spec-table-status">Status</th>
+            <th class="spec-table-delivery">Delivery</th>
+            <th class="spec-table-backlog">Backlog</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows || '<tr><td colspan="7">No specs found.</td></tr>'}</tbody>
+      </table>
+    </section>
+    ${PREVIEW_SCRIPT}
+  `
+  const tablePath = join(OUTPUT_DIR, tableUrl)
+  ensureDir(dirname(tablePath))
+  writeFileSync(tablePath, pageShell(tableHeading, sections, section.slug, 'table', tableBody, tableUrl))
+
+  searchIndex.push({
+    title: tableHeading,
+    section: section.label,
+    group: 'Specs',
+    snippet: `Flat table view of ${specs.length} specs.`,
+    url: tableUrl,
   })
 }
 
