@@ -83,13 +83,15 @@ export async function generate(flags) {
         return count || null;
     }
     const TABLE_SCOPE = {
-        features: 'features',
+        mobile_features: 'mobile_features',
+        web_features: 'web_features',
         backend: 'backend',
         release: 'release',
         ops: 'ops',
     };
     const TABLE_GROUPING = {
-        features: { groupColumn: 'Feature Group', leafColumns: ['Feature'] },
+        mobile_features: { groupColumn: 'Feature Group', leafColumns: ['Feature'] },
+        web_features: { groupColumn: 'Feature Group', leafColumns: ['Feature'] },
         backend: { groupColumn: 'Backend Group', leafColumns: ['Capability'] },
         release: { groupColumn: 'Area', leafColumns: ['Feature Group', 'Feature'] },
         ops: { groupColumn: 'Area', leafColumns: ['Feature Group', 'Feature'] },
@@ -1126,7 +1128,7 @@ document.addEventListener('DOMContentLoaded', function() {
   .preview-cell-group { width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .preview-cell-item { width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .preview-cell-phase { width: 78px; }
-  .preview-cell-surface { width: 78px; }
+  .preview-cell-surfaces { width: 120px; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .preview-empty { color: var(--muted); opacity: 0.5; }
   .type-badge {
     display: inline-block;
@@ -1522,6 +1524,33 @@ document.addEventListener('DOMContentLoaded', function() {
         specPathToUrl.set(spec.specPath, spec.url);
         specPathToTitle.set(spec.specPath, spec.title);
     }
+    const specBucketByPath = new Map();
+    {
+        const rank = { shipped: 4, beta: 3, alpha: 2, planned: 1, parked: 0 };
+        const subfeatureStatusToBucket = (status) => {
+            const v = status.replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase();
+            if (!v)
+                return null;
+            if (v === 'done' || v === 'implemented' || v === 'shipped')
+                return 'shipped';
+            if (v === 'in progress' || v === 'alpha' || v === 'started')
+                return 'alpha';
+            if (v === 'planned' || v === 'open')
+                return 'planned';
+            if (v === 'deferred' || v === 'parked')
+                return 'parked';
+            return null;
+        };
+        for (const row of snapshot.tables.subfeatures?.rows || []) {
+            const bucket = subfeatureStatusToBucket(String(row.Status || ''));
+            if (!bucket)
+                continue;
+            const existing = specBucketByPath.get(row.Spec);
+            if (!existing || rank[bucket] > rank[existing]) {
+                specBucketByPath.set(row.Spec, bucket);
+            }
+        }
+    }
     for (const section of sections) {
         const specsForSection = section.source
             ? specsBySource.get(section.source.id) || []
@@ -1885,8 +1914,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return n;
     }
     function extractPreviewRow(fm) {
+        const hasMobileFeature = !!(fm.roadmap_mobile_feature_item || fm.roadmap_mobile_feature_group);
+        const hasWebFeature = !!(fm.roadmap_web_feature_item || fm.roadmap_web_feature_group);
         let type = '';
-        if (fm.roadmap_type === 'feature' || fm.roadmap_feature_item)
+        if (hasMobileFeature && hasWebFeature)
+            type = 'feature';
+        else if (hasMobileFeature)
+            type = 'mobile-feature';
+        else if (hasWebFeature)
+            type = 'web-feature';
+        else if (fm.roadmap_type === 'feature' || fm.roadmap_feature_item)
             type = 'feature';
         else if (fm.roadmap_type === 'backend' || fm.roadmap_backend_item)
             type = 'backend';
@@ -1896,30 +1933,40 @@ document.addEventListener('DOMContentLoaded', function() {
             type = 'ops';
         else if (fm.roadmap_future_item)
             type = 'future';
+        const surfaces = [];
+        if (hasMobileFeature)
+            surfaces.push('Mobile');
+        if (hasWebFeature)
+            surfaces.push('Web');
         return {
             type,
-            group: fm.roadmap_feature_group ||
+            group: fm.roadmap_mobile_feature_group ||
+                fm.roadmap_web_feature_group ||
                 fm.roadmap_backend_group ||
                 fm.roadmap_release_group ||
                 fm.roadmap_ops_group ||
                 fm.roadmap_future_group ||
+                fm.roadmap_feature_group ||
                 fm.roadmap_group ||
                 '',
-            item: fm.roadmap_feature_item ||
+            item: fm.roadmap_mobile_feature_item ||
+                fm.roadmap_web_feature_item ||
                 fm.roadmap_backend_item ||
                 fm.roadmap_release_item ||
                 fm.roadmap_ops_item ||
                 fm.roadmap_future_item ||
+                fm.roadmap_feature_item ||
                 fm.roadmap_item ||
                 '',
-            phase: fm.roadmap_feature_phase ||
+            phase: fm.roadmap_mobile_feature_phase ||
+                fm.roadmap_web_feature_phase ||
                 fm.roadmap_backend_phase ||
                 fm.roadmap_release_phase ||
                 fm.roadmap_ops_phase ||
+                fm.roadmap_feature_phase ||
                 fm.roadmap_phase ||
                 '',
-            mobile: fm.roadmap_mobile || '',
-            web: fm.roadmap_web || '',
+            surfaces: surfaces.join(', '),
             horizon: fm.roadmap_future_horizon || '',
         };
     }
@@ -1943,18 +1990,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const row = extractPreviewRow(spec.frontmatter);
         if (row.phase.toLowerCase() === 'parked')
             return 'parked';
-        // v2: a spec's bucket is the "best" of its declared surfaces — until a
-        // future pass derives it directly from subfeature-status rollups.
-        const rank = { shipped: 4, beta: 3, alpha: 2, planned: 1, parked: 0 };
-        let best = null;
-        for (const surface of [row.mobile, row.web]) {
-            const c = classifyPreviewValue(surface);
-            if (!c)
-                continue;
-            if (!best || rank[c] > rank[best])
-                best = c;
-        }
-        return best;
+        // v3: the spec's bucket is the best of its subfeature statuses,
+        // precomputed from snapshot.tables.subfeatures.
+        return specBucketByPath.get(spec.specPath) || null;
     }
     function rollupTreeNode(node) {
         const roll = { shipped: 0, beta: 0, alpha: 0, planned: 0, parked: 0, tracked: 0, total: 0 };
@@ -2050,8 +2088,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `data-search="${escAttr(searchText)}"`,
             `data-type="${escAttr(row.type || '—')}"`,
             `data-phase="${escAttr(row.phase || '—')}"`,
-            `data-mobile="${escAttr(row.mobile || '—')}"`,
-            `data-web="${escAttr(row.web || '—')}"`,
+            `data-surfaces="${escAttr(row.surfaces || '—')}"`,
             `data-horizon="${escAttr(row.horizon || '—')}"`,
         ].join(' ');
         const statusCell = (v) => v
@@ -2078,8 +2115,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <span class="preview-cell preview-cell-group" title="${escAttr(row.group)}">${row.group ? escHtml(row.group) : '<span class="preview-empty">—</span>'}</span>
     <span class="preview-cell preview-cell-item" title="${escAttr(row.item)}">${row.item ? escHtml(row.item) : '<span class="preview-empty">—</span>'}</span>
     <span class="preview-cell preview-cell-phase">${statusCell(row.phase)}</span>
-    <span class="preview-cell preview-cell-surface">${statusCell(row.mobile)}</span>
-    <span class="preview-cell preview-cell-surface">${statusCell(row.web)}</span>
+    <span class="preview-cell preview-cell-surfaces">${row.surfaces ? escHtml(row.surfaces) : '<span class="preview-empty">—</span>'}</span>
     ${anchorsCell}
   </div>`;
     }
@@ -2204,15 +2240,13 @@ document.addEventListener('DOMContentLoaded', function() {
         ]);
         const typeValues = distinctValues(specs, (r) => r.type);
         const phaseValues = distinctValues(specs, (r) => r.phase);
-        const mobileValues = distinctValues(specs, (r) => r.mobile);
-        const webValues = distinctValues(specs, (r) => r.web);
+        const surfaceValues = distinctValues(specs, (r) => r.surfaces);
         const filterBar = `
     <div class="preview-controls">
       <input type="text" class="preview-search" placeholder="Filter by title, path, group, item…" />
       ${renderFilterSelect('type', 'Type', typeValues)}
       ${renderFilterSelect('phase', 'Phase', phaseValues)}
-      ${renderFilterSelect('mobile', 'Mobile', mobileValues)}
-      ${renderFilterSelect('web', 'Web', webValues)}
+      ${renderFilterSelect('surfaces', 'Surfaces', surfaceValues)}
       <button type="button" class="preview-reset">Reset</button>
       <span class="preview-count"><span class="preview-count-visible">${specs.length} of ${specs.length}</span> specs</span>
     </div>`;
@@ -2223,8 +2257,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <span class="preview-cell preview-cell-group">Group</span>
       <span class="preview-cell preview-cell-item">Item</span>
       <span class="preview-cell preview-cell-phase">Phase</span>
-      <span class="preview-cell preview-cell-surface">Mobile</span>
-      <span class="preview-cell preview-cell-surface">Web</span>
+      <span class="preview-cell preview-cell-surfaces">Surfaces</span>
       <span class="preview-anchors-spacer" aria-hidden="true"></span>
     </div>`;
         const treeHtml = renderPreviewTreeNode(previewRoot, 0);

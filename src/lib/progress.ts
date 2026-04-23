@@ -35,17 +35,6 @@ function phaseParked(row: Row) {
   return String(row.Phase || '').trim().toLowerCase() === 'parked'
 }
 
-function classifySurface(value: string): ProgressBucket | null {
-  const v = stripDate(value).toLowerCase()
-  if (!v || v === '-' || v === '—') return null
-  if (v === 'ready' || v === 'done' || v === 'shipped') return 'shipped'
-  if (v === 'beta') return 'beta'
-  if (v === 'alpha' || v === 'started' || v === 'in progress') return 'alpha'
-  if (v === 'planned' || v === 'draft' || v === 'placeholder') return 'planned'
-  if (v === 'parked') return 'parked'
-  return null
-}
-
 function classifySubfeatureStatus(value: string): ProgressBucket | null {
   const v = stripDate(value).toLowerCase()
   if (!v) return null
@@ -127,22 +116,8 @@ export function computeProgress(tables: Record<string, { headers: string[]; rows
     return byTableMut[tableKey]
   }
 
-  // Features: roll surface values up per-table. Under v2 there is no
-  // cross-spec 'Capability' axis — Delivery (subfeatures) is the honest
-  // rollup.
-  for (const row of tables.features?.rows || []) {
-    const parked = phaseParked(row)
-    for (const surface of ['Mobile', 'Web'] as const) {
-      const raw = String(row[surface] || '')
-      if (!raw || raw === '-') continue
-      const bucket = parked ? 'parked' : classifySurface(raw)
-      if (!bucket) {
-        warn(`features.${surface} unknown value ${JSON.stringify(raw)}`)
-        continue
-      }
-      addToAggregate(bucketFor('features'), row, bucket)
-    }
-  }
+  // Mobile and Web feature tables roll up via their subfeature rows
+  // (Delivery axis) — per-row surface-state columns are gone under v3.
 
   for (const row of tables.subfeatures?.rows || []) {
     const bucket = classifySubfeatureStatus(row.Status || '')

@@ -76,7 +76,8 @@ function toCsv(headers, rows) {
     ].join('\n');
 }
 export function collectSpecTracking(specFiles) {
-    const featureRows = [];
+    const mobileFeatureRows = [];
+    const webFeatureRows = [];
     const backendRows = [];
     const releaseRows = [];
     const opsRows = [];
@@ -87,19 +88,26 @@ export function collectSpecTracking(specFiles) {
         const markdown = readFileSync(file.fullPath, 'utf8');
         const { data, body } = parseFrontmatter(markdown);
         const specRef = file.specPath || file.relPath.replace(/\\/g, '/');
-        const hasFeatureMeta = data.roadmap_feature_item || data.roadmap_type === 'feature';
+        const hasMobileFeatureMeta = data.roadmap_mobile_feature_item || data.roadmap_mobile_feature_group;
+        const hasWebFeatureMeta = data.roadmap_web_feature_item || data.roadmap_web_feature_group;
         const hasBackendMeta = data.roadmap_backend_item || data.roadmap_type === 'backend';
         const hasReleaseMeta = data.roadmap_release_item;
         const hasOpsMeta = data.roadmap_ops_item;
         const hasFutureMeta = data.roadmap_future_item;
-        if (hasFeatureMeta) {
-            featureRows.push({
+        if (hasMobileFeatureMeta) {
+            mobileFeatureRows.push({
                 Spec: specRef,
-                'Feature Group': data.roadmap_feature_group || data.roadmap_group || '',
-                Feature: data.roadmap_feature_item || data.roadmap_item || '',
-                Phase: data.roadmap_feature_phase || data.roadmap_phase || '',
-                Mobile: data.roadmap_mobile || '',
-                Web: data.roadmap_web || '',
+                'Feature Group': data.roadmap_mobile_feature_group || '',
+                Feature: data.roadmap_mobile_feature_item || '',
+                Phase: data.roadmap_mobile_feature_phase || '',
+            });
+        }
+        if (hasWebFeatureMeta) {
+            webFeatureRows.push({
+                Spec: specRef,
+                'Feature Group': data.roadmap_web_feature_group || '',
+                Feature: data.roadmap_web_feature_item || '',
+                Phase: data.roadmap_web_feature_phase || '',
             });
         }
         if (hasBackendMeta) {
@@ -137,8 +145,32 @@ export function collectSpecTracking(specFiles) {
                 Notes: data.roadmap_future_notes || '',
             });
         }
-        const subfeatures = parseMarkdownTable(extractSection(body, '### Subfeatures'));
-        for (const row of subfeatures) {
+        // v3: feature specs use `### Mobile Subfeatures` + `### Web Subfeatures`.
+        // Other specs (backend, library, …) keep a single `### Subfeatures` block.
+        const mobileSubs = parseMarkdownTable(extractSection(body, '### Mobile Subfeatures'));
+        for (const row of mobileSubs) {
+            subfeatureRows.push({
+                Spec: specRef,
+                Key: row.Key || '',
+                Subfeature: row.Subfeature || '',
+                Surface: 'Mobile',
+                Status: row.Status || '',
+                Notes: row.Notes || '',
+            });
+        }
+        const webSubs = parseMarkdownTable(extractSection(body, '### Web Subfeatures'));
+        for (const row of webSubs) {
+            subfeatureRows.push({
+                Spec: specRef,
+                Key: row.Key || '',
+                Subfeature: row.Subfeature || '',
+                Surface: 'Web',
+                Status: row.Status || '',
+                Notes: row.Notes || '',
+            });
+        }
+        const legacySubs = parseMarkdownTable(extractSection(body, '### Subfeatures'));
+        for (const row of legacySubs) {
             subfeatureRows.push({
                 Spec: specRef,
                 Key: row.Key || '',
@@ -160,7 +192,8 @@ export function collectSpecTracking(specFiles) {
             });
         }
     }
-    featureRows.sort((a, b) => a.Feature.localeCompare(b.Feature));
+    mobileFeatureRows.sort((a, b) => a.Feature.localeCompare(b.Feature));
+    webFeatureRows.sort((a, b) => a.Feature.localeCompare(b.Feature));
     backendRows.sort((a, b) => a.Capability.localeCompare(b.Capability));
     releaseRows.sort((a, b) => a.Feature.localeCompare(b.Feature));
     opsRows.sort((a, b) => a.Feature.localeCompare(b.Feature));
@@ -168,14 +201,16 @@ export function collectSpecTracking(specFiles) {
     subfeatureRows.sort((a, b) => a.Key.localeCompare(b.Key));
     backlogRows.sort((a, b) => a.Key.localeCompare(b.Key));
     return {
-        featureRows,
+        mobileFeatureRows,
+        webFeatureRows,
         backendRows,
         releaseRows,
         opsRows,
         futureRows,
         subfeatureRows,
         backlogRows,
-        featureCsv: toCsv(['Spec', 'Feature Group', 'Feature', 'Phase', 'Mobile', 'Web'], featureRows),
+        mobileFeatureCsv: toCsv(['Spec', 'Feature Group', 'Feature', 'Phase'], mobileFeatureRows),
+        webFeatureCsv: toCsv(['Spec', 'Feature Group', 'Feature', 'Phase'], webFeatureRows),
         backendCsv: toCsv(['Spec', 'Backend Group', 'Capability', 'Phase'], backendRows),
         releaseCsv: toCsv(['Spec', 'Area', 'Feature Group', 'Feature', 'Phase'], releaseRows),
         opsCsv: toCsv(['Spec', 'Area', 'Feature Group', 'Feature', 'Phase'], opsRows),

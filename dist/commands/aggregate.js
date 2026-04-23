@@ -26,7 +26,8 @@ export async function aggregate(flags) {
     const mirrorDir = resolve(cwd, config.paths.mirror);
     const outputDir = resolve(cwd, config.paths.generated);
     mkdirSync(outputDir, { recursive: true });
-    const featureRows = [];
+    const mobileFeatureRows = [];
+    const webFeatureRows = [];
     const backendRows = [];
     const releaseRows = [];
     const opsRows = [];
@@ -52,7 +53,8 @@ export async function aggregate(flags) {
         }
         const files = collectSpecFiles(source.id, mirrorRoot);
         const tracking = collectSpecTracking(files);
-        featureRows.push(...withSource(tracking.featureRows, source));
+        mobileFeatureRows.push(...withSource(tracking.mobileFeatureRows, source));
+        webFeatureRows.push(...withSource(tracking.webFeatureRows, source));
         backendRows.push(...withSource(tracking.backendRows, source));
         releaseRows.push(...withSource(tracking.releaseRows, source));
         opsRows.push(...withSource(tracking.opsRows, source));
@@ -71,11 +73,17 @@ export async function aggregate(flags) {
         console.warn(`[aggregate] Collected ${files.length} spec files from ${source.label}`);
     }
     const tables = {
-        features: {
-            title: 'Features',
-            headers: ['Source', 'Repository', 'Spec', 'Feature Group', 'Feature', 'Phase', 'Mobile', 'Web'],
-            rows: featureRows,
-            csvFile: 'features.csv',
+        mobile_features: {
+            title: 'Mobile Features',
+            headers: ['Source', 'Repository', 'Spec', 'Feature Group', 'Feature', 'Phase'],
+            rows: mobileFeatureRows,
+            csvFile: 'mobile_features.csv',
+        },
+        web_features: {
+            title: 'Web Features',
+            headers: ['Source', 'Repository', 'Spec', 'Feature Group', 'Feature', 'Phase'],
+            rows: webFeatureRows,
+            csvFile: 'web_features.csv',
         },
         backend: {
             title: 'Backend',

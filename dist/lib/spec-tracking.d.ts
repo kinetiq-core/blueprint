@@ -7,14 +7,16 @@ export interface TrackingRow {
     [key: string]: string;
 }
 export interface TrackingResult {
-    featureRows: TrackingRow[];
+    mobileFeatureRows: TrackingRow[];
+    webFeatureRows: TrackingRow[];
     backendRows: TrackingRow[];
     releaseRows: TrackingRow[];
     opsRows: TrackingRow[];
     futureRows: TrackingRow[];
     subfeatureRows: TrackingRow[];
     backlogRows: TrackingRow[];
-    featureCsv: string;
+    mobileFeatureCsv: string;
+    webFeatureCsv: string;
     backendCsv: string;
     releaseCsv: string;
     opsCsv: string;

@@ -56,7 +56,8 @@ export async function aggregate(flags: Record<string, string | boolean>): Promis
   const outputDir = resolve(cwd, config.paths.generated)
   mkdirSync(outputDir, { recursive: true })
 
-  const featureRows: TrackingRow[] = []
+  const mobileFeatureRows: TrackingRow[] = []
+  const webFeatureRows: TrackingRow[] = []
   const backendRows: TrackingRow[] = []
   const releaseRows: TrackingRow[] = []
   const opsRows: TrackingRow[] = []
@@ -86,7 +87,8 @@ export async function aggregate(flags: Record<string, string | boolean>): Promis
     const files = collectSpecFiles(source.id, mirrorRoot)
     const tracking = collectSpecTracking(files)
 
-    featureRows.push(...withSource(tracking.featureRows, source))
+    mobileFeatureRows.push(...withSource(tracking.mobileFeatureRows, source))
+    webFeatureRows.push(...withSource(tracking.webFeatureRows, source))
     backendRows.push(...withSource(tracking.backendRows, source))
     releaseRows.push(...withSource(tracking.releaseRows, source))
     opsRows.push(...withSource(tracking.opsRows, source))
@@ -108,11 +110,17 @@ export async function aggregate(flags: Record<string, string | boolean>): Promis
   }
 
   const tables: Record<string, SnapshotTable> = {
-    features: {
-      title: 'Features',
-      headers: ['Source', 'Repository', 'Spec', 'Feature Group', 'Feature', 'Phase', 'Mobile', 'Web'],
-      rows: featureRows,
-      csvFile: 'features.csv',
+    mobile_features: {
+      title: 'Mobile Features',
+      headers: ['Source', 'Repository', 'Spec', 'Feature Group', 'Feature', 'Phase'],
+      rows: mobileFeatureRows,
+      csvFile: 'mobile_features.csv',
+    },
+    web_features: {
+      title: 'Web Features',
+      headers: ['Source', 'Repository', 'Spec', 'Feature Group', 'Feature', 'Phase'],
+      rows: webFeatureRows,
+      csvFile: 'web_features.csv',
     },
     backend: {
       title: 'Backend',
