@@ -378,21 +378,16 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </aside>`;
     }
-    function pageShell(title, sections, activeSectionSlug, activePageKey, body) {
+    function pageShell(title, sections, activeSectionSlug, activePageKey, body, pagePath) {
+        const depth = pagePath.split('/').filter(Boolean).length - 1;
+        const baseHref = depth > 0 ? '../'.repeat(depth) : './';
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${escHtml(title)}</title>
-<script>
-  (function() {
-    var path = window.location.pathname || '/';
-    var match = path.match(new RegExp('^(.*\\\\/roadmaps)(?:\\\\/.*)?$'));
-    var baseHref = match ? (match[1] + '/') : path.replace(/[^/]*$/, '');
-    document.write('<base href="' + baseHref + '">');
-  })();
-</script>
+<base href="${baseHref}">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
@@ -1611,7 +1606,10 @@ document.addEventListener('DOMContentLoaded', function() {
     ${progressPanel}
     ${sourcePanel}
   `;
-        writeFileSync(join(OUTPUT_DIR, routeFor(section.slug, 'index')), pageShell(`${section.label} — Roadmaps`, sections, section.slug, 'index', overviewBody));
+        {
+            const pagePath = routeFor(section.slug, 'index');
+            writeFileSync(join(OUTPUT_DIR, pagePath), pageShell(`${section.label} — Roadmaps`, sections, section.slug, 'index', overviewBody, pagePath));
+        }
         searchIndex.push({
             title: `${section.label} Overview`,
             section: section.label,
@@ -1716,7 +1714,10 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
       </section>
     `;
-            writeFileSync(join(OUTPUT_DIR, routeFor(section.slug, page.key)), pageShell(`${section.label} — ${table.title}`, sections, section.slug, page.key, body));
+            {
+                const pagePath = routeFor(section.slug, page.key);
+                writeFileSync(join(OUTPUT_DIR, pagePath), pageShell(`${section.label} — ${table.title}`, sections, section.slug, page.key, body, pagePath));
+            }
             searchIndex.push({
                 title: `${section.label} — ${table.title}`,
                 section: section.label,
@@ -1796,7 +1797,7 @@ document.addEventListener('DOMContentLoaded', function() {
     ${frontmatterPanel}
     <section class="panel content">${rendered.html}</section>
   `;
-        writeFileSync(outPath, pageShell(`${rendered.title} — ${spec.sourceLabel}`, sections, spec.sourceSlug, 'specs', specBody));
+        writeFileSync(outPath, pageShell(`${rendered.title} — ${spec.sourceLabel}`, sections, spec.sourceSlug, 'specs', specBody, spec.url));
         searchIndex.push({
             title: rendered.title,
             section: spec.sourceLabel,
@@ -2195,7 +2196,7 @@ document.addEventListener('DOMContentLoaded', function() {
   `;
         const indexPath = join(OUTPUT_DIR, indexUrl);
         ensureDir(dirname(indexPath));
-        writeFileSync(indexPath, pageShell(`${section.label} — Specs`, sections, section.slug, 'specs', indexBody));
+        writeFileSync(indexPath, pageShell(`${section.label} — Specs`, sections, section.slug, 'specs', indexBody, indexUrl));
         searchIndex.push({
             title: `${section.label} — Specs`,
             section: section.label,
@@ -2268,7 +2269,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="source-list">${rootSourceRows || '<p>No sources recorded.</p>'}</div>
   </section>
 `;
-    writeFileSync(join(OUTPUT_DIR, 'index.html'), pageShell('Roadmaps', sections, 'root', 'index', indexBody));
+    writeFileSync(join(OUTPUT_DIR, 'index.html'), pageShell('Roadmaps', sections, 'root', 'index', indexBody, 'index.html'));
     const searchBody = `
   <section class="hero">
     <div class="eyebrow">Kinetiq Core</div>
@@ -2395,7 +2396,7 @@ document.addEventListener('DOMContentLoaded', function() {
   })();
   </script>
 `;
-    writeFileSync(join(OUTPUT_DIR, 'search.html'), pageShell('Search', sections, 'root', 'search', searchBody));
+    writeFileSync(join(OUTPUT_DIR, 'search.html'), pageShell('Search', sections, 'root', 'search', searchBody, 'search.html'));
     writeFileSync(join(OUTPUT_DIR, 'data', 'search-index.json'), JSON.stringify(searchIndex, null, 2));
     console.warn(`Generated roadmaps site at ${OUTPUT_DIR}`);
 }
