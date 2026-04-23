@@ -262,10 +262,15 @@ function toCsv(headers: string[], rows: SnapshotRow[]) {
 
 function buildSections(snapshot: Snapshot): Section[] {
   const okSources = snapshot.sources.filter((source) => source.status === 'ok')
+  // In single-source mode the root Index already is the section overview,
+  // so the per-source Overview page would just duplicate it.
+  const skipOverview = okSources.length <= 1
 
   const sourceSections = okSources.map((source) => {
     const slug = sourceSlug(source.id)
-    const pages: Section['pages'] = [{ key: 'index', label: 'Overview', href: routeFor(slug, 'index') }]
+    const pages: Section['pages'] = skipOverview
+      ? []
+      : [{ key: 'index', label: 'Overview', href: routeFor(slug, 'index') }]
 
     for (const key of TABLE_ORDER) {
       const table = snapshot.tables[key]
@@ -1599,11 +1604,18 @@ for (const section of sections) {
     ? specsBySource.get(section.source.id) || []
     : allSpecs
   if (specsForSection.length > 0) {
-    section.pages.push({
-      key: 'specs',
+    const specsPage = {
+      key: 'specs' as const,
       label: 'Specs',
       href: routeFor(section.slug, 'specs'),
-    })
+    }
+    const hasOverview = section.pages.some((p) => p.key === 'index')
+    if (hasOverview) {
+      section.pages.push(specsPage)
+    } else {
+      // No Overview in this mode — Specs becomes the section's entry page.
+      section.pages.unshift(specsPage)
+    }
   }
 }
 
@@ -1736,18 +1748,20 @@ for (const section of sections) {
     ${sourcePanel}
   `
 
-  {
+  // Skip the section-overview write in single-source mode — the root
+  // index already covers this ground (overall progress + L1/L2 breakdown).
+  if (section.pages.some((p) => p.key === 'index')) {
     const pagePath = routeFor(section.slug, 'index')
     writeFileSync(join(OUTPUT_DIR, pagePath), pageShell(`${section.label} — Roadmaps`, sections, section.slug, 'index', overviewBody, pagePath))
-  }
 
-  searchIndex.push({
-    title: `${section.label} Overview`,
-    section: section.label,
-    group: '',
-    snippet: section.source ? `Repository-specific roadmap views for ${section.source.label}.` : 'Combined cross-repo roadmap views.',
-    url: routeFor(section.slug, 'index'),
-  })
+    searchIndex.push({
+      title: `${section.label} Overview`,
+      section: section.label,
+      group: '',
+      snippet: section.source ? `Repository-specific roadmap views for ${section.source.label}.` : 'Combined cross-repo roadmap views.',
+      url: routeFor(section.slug, 'index'),
+    })
+  }
 
   for (const page of section.pages) {
     if (page.key === 'index' || page.key === 'specs') continue
