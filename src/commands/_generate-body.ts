@@ -114,7 +114,7 @@ function columnClass(header: string) {
 
 const TABLE_ORDER: TableKey[] = []
 
-type ProgressScope = 'capability' | 'delivery' | 'backlog' | TableKey
+type ProgressScope = 'delivery' | 'backlog' | TableKey
 
 function getProgressCount(
   snapshot: Snapshot,
@@ -122,7 +122,7 @@ function getProgressCount(
   sourceId: string | undefined
 ): ProgressCount | null {
   const agg =
-    scope === 'capability' || scope === 'delivery' || scope === 'backlog'
+    scope === 'delivery' || scope === 'backlog'
       ? snapshot.progress[scope]
       : snapshot.progress.byTable[scope]
   if (!agg) return null
@@ -1195,7 +1195,6 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   .preview-cell-group { width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .preview-cell-item { width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .preview-cell-phase { width: 78px; }
-  .preview-cell-maturity { width: 94px; }
   .preview-cell-surface { width: 78px; }
   .preview-empty { color: var(--muted); opacity: 0.5; }
   .type-badge {
@@ -1711,15 +1710,13 @@ for (const section of sections) {
       </div>
     </section>`
 
-  const sectionCapability = getProgressCount(snapshot, 'capability', section.source?.id)
   const sectionDelivery = getProgressCount(snapshot, 'delivery', section.source?.id)
   const sectionBacklog = getProgressCount(snapshot, 'backlog', section.source?.id)
 
-  const progressPanel = (sectionCapability || sectionDelivery || sectionBacklog)
+  const progressPanel = (sectionDelivery || sectionBacklog)
     ? `
     <section class="panel">
       <h2>Progress</h2>
-      ${sectionCapability ? `<div class="progress-group"><h3>Capability <span class="progress-group-note">Features, Backend, Release, Ops</span></h3>${renderProgress(sectionCapability)}</div>` : ''}
       ${sectionDelivery ? `<div class="progress-group"><h3>Delivery <span class="progress-group-note">Subfeatures — see each spec page for detail</span></h3>${renderProgress(sectionDelivery)}</div>` : ''}
       ${sectionBacklog ? `<div class="progress-group"><h3>Backlog <span class="progress-group-note">Open questions — see each spec page for detail</span></h3>${renderProgress(sectionBacklog)}</div>` : ''}
     </section>`
@@ -2003,7 +2000,6 @@ type PreviewRow = {
   group: string
   item: string
   phase: string
-  maturity: string
   mobile: string
   web: string
   horizon: string
@@ -2042,12 +2038,6 @@ function extractPreviewRow(fm: Record<string, string>): PreviewRow {
       fm.roadmap_ops_phase ||
       fm.roadmap_phase ||
       '',
-    maturity:
-      fm.roadmap_backend_maturity ||
-      fm.roadmap_release_maturity ||
-      fm.roadmap_ops_maturity ||
-      fm.roadmap_maturity ||
-      '',
     mobile: fm.roadmap_mobile || '',
     web: fm.roadmap_web || '',
     horizon: fm.roadmap_future_horizon || '',
@@ -2070,10 +2060,8 @@ function classifyPreviewValue(value: string): PreviewBucket | null {
 function classifyPreviewSpec(spec: SpecMeta): PreviewBucket | null {
   const row = extractPreviewRow(spec.frontmatter)
   if (row.phase.toLowerCase() === 'parked') return 'parked'
-  if (row.maturity) {
-    const c = classifyPreviewValue(row.maturity)
-    if (c) return c
-  }
+  // v2: a spec's bucket is the "best" of its declared surfaces — until a
+  // future pass derives it directly from subfeature-status rollups.
   const rank: Record<PreviewBucket, number> = { shipped: 4, beta: 3, alpha: 2, planned: 1, parked: 0 }
   let best: PreviewBucket | null = null
   for (const surface of [row.mobile, row.web]) {
@@ -2191,7 +2179,6 @@ function renderPreviewLeaf(spec: SpecMeta, isChild: boolean): string {
     `data-search="${escAttr(searchText)}"`,
     `data-type="${escAttr(row.type || '—')}"`,
     `data-phase="${escAttr(row.phase || '—')}"`,
-    `data-maturity="${escAttr(row.maturity || '—')}"`,
     `data-mobile="${escAttr(row.mobile || '—')}"`,
     `data-web="${escAttr(row.web || '—')}"`,
     `data-horizon="${escAttr(row.horizon || '—')}"`,
@@ -2225,7 +2212,6 @@ function renderPreviewLeaf(spec: SpecMeta, isChild: boolean): string {
     <span class="preview-cell preview-cell-group" title="${escAttr(row.group)}">${row.group ? escHtml(row.group) : '<span class="preview-empty">—</span>'}</span>
     <span class="preview-cell preview-cell-item" title="${escAttr(row.item)}">${row.item ? escHtml(row.item) : '<span class="preview-empty">—</span>'}</span>
     <span class="preview-cell preview-cell-phase">${statusCell(row.phase)}</span>
-    <span class="preview-cell preview-cell-maturity">${statusCell(row.maturity)}</span>
     <span class="preview-cell preview-cell-surface">${statusCell(row.mobile)}</span>
     <span class="preview-cell preview-cell-surface">${statusCell(row.web)}</span>
     ${anchorsCell}
@@ -2360,7 +2346,6 @@ for (const section of sections) {
 
   const typeValues = distinctValues(specs, (r) => r.type)
   const phaseValues = distinctValues(specs, (r) => r.phase)
-  const maturityValues = distinctValues(specs, (r) => r.maturity)
   const mobileValues = distinctValues(specs, (r) => r.mobile)
   const webValues = distinctValues(specs, (r) => r.web)
 
@@ -2369,7 +2354,6 @@ for (const section of sections) {
       <input type="text" class="preview-search" placeholder="Filter by title, path, group, item…" />
       ${renderFilterSelect('type', 'Type', typeValues)}
       ${renderFilterSelect('phase', 'Phase', phaseValues)}
-      ${renderFilterSelect('maturity', 'Maturity', maturityValues)}
       ${renderFilterSelect('mobile', 'Mobile', mobileValues)}
       ${renderFilterSelect('web', 'Web', webValues)}
       <button type="button" class="preview-reset">Reset</button>
@@ -2383,7 +2367,6 @@ for (const section of sections) {
       <span class="preview-cell preview-cell-group">Group</span>
       <span class="preview-cell preview-cell-item">Item</span>
       <span class="preview-cell preview-cell-phase">Phase</span>
-      <span class="preview-cell preview-cell-maturity">Maturity</span>
       <span class="preview-cell preview-cell-surface">Mobile</span>
       <span class="preview-cell preview-cell-surface">Web</span>
       <span class="preview-anchors-spacer" aria-hidden="true"></span>
@@ -2396,7 +2379,7 @@ for (const section of sections) {
       <div class="eyebrow">Kinetiq Core</div>
       ${specsCrumbs}
       <h1>${escHtml(section.label)} — Specs</h1>
-      <p class="subhead">${specs.length} spec file${specs.length === 1 ? '' : 's'}${section.source ? ` from ${escHtml(section.source.label)}` : ' across all configured sources'}. Filter by type, phase, maturity, or surface.</p>
+      <p class="subhead">${specs.length} spec file${specs.length === 1 ? '' : 's'}${section.source ? ` from ${escHtml(section.source.label)}` : ' across all configured sources'}. Filter by type, phase, or surface.</p>
     </section>
     <section class="panel" id="specs-preview-root">
       ${filterBar}
@@ -2501,14 +2484,12 @@ function buildRootBreakdown(): string {
 
 const rootBreakdown = buildRootBreakdown()
 
-const overallCapability = snapshot.progress.capability.all
 const overallDelivery = snapshot.progress.delivery.all
 const overallBacklog = snapshot.progress.backlog.all
 
 const overallProgressPanel = `
   <section class="panel">
     <h2>Overall progress</h2>
-    <div class="progress-group"><h3>Capability <span class="progress-group-note">Features, Backend, Release, Ops across all sources</span></h3>${renderProgress(overallCapability)}</div>
     <div class="progress-group"><h3>Delivery <span class="progress-group-note">Subfeatures across all sources — see each spec page for detail</span></h3>${renderProgress(overallDelivery)}</div>
     <div class="progress-group"><h3>Backlog <span class="progress-group-note">Open questions and tracked items across all sources — see each spec page for detail</span></h3>${renderProgress(overallBacklog)}</div>
   </section>`
@@ -2534,7 +2515,7 @@ const indexBody = `
   <section class="hero">
     <div class="eyebrow">Kinetiq Core</div>
     <h1>Roadmaps</h1>
-    <p class="subhead">Living blueprints across the product. Overall progress summarises capability, delivery, and backlog; the breakdown lists top-level and second-level spec folders with a release-aware status bar.</p>
+    <p class="subhead">Living blueprints across the product. Overall progress summarises delivery and backlog; the breakdown lists top-level and second-level spec folders with a release-aware status bar.</p>
     <div class="meta">Snapshot generated ${escHtml(snapshot.generatedAt)} via ${escHtml(snapshot.generatedBy)}</div>
     ${PROGRESS_LEGEND_HTML}
     <div class="links">

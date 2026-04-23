@@ -4,15 +4,15 @@ function stripDate(value) {
 function phaseParked(row) {
     return String(row.Phase || '').trim().toLowerCase() === 'parked';
 }
-function classifyMaturity(value) {
+function classifySurface(value) {
     const v = stripDate(value).toLowerCase();
-    if (!v || v === '-')
+    if (!v || v === '-' || v === '—')
         return null;
-    if (v === 'ready')
+    if (v === 'ready' || v === 'done' || v === 'shipped')
         return 'shipped';
     if (v === 'beta')
         return 'beta';
-    if (v === 'alpha' || v === 'started')
+    if (v === 'alpha' || v === 'started' || v === 'in progress')
         return 'alpha';
     if (v === 'planned' || v === 'draft' || v === 'placeholder')
         return 'planned';
@@ -94,7 +94,6 @@ function warn(msg) {
     console.warn(`[progress] ${msg}`);
 }
 export function computeProgress(tables) {
-    const capability = emptyAggregate();
     const delivery = emptyAggregate();
     const backlog = emptyAggregate();
     const byTableMut = {};
@@ -103,31 +102,21 @@ export function computeProgress(tables) {
             byTableMut[tableKey] = emptyAggregate();
         return byTableMut[tableKey];
     };
+    // Features: roll surface values up per-table. Under v2 there is no
+    // cross-spec 'Capability' axis — Delivery (subfeatures) is the honest
+    // rollup.
     for (const row of tables.features?.rows || []) {
         const parked = phaseParked(row);
         for (const surface of ['Mobile', 'Web']) {
             const raw = String(row[surface] || '');
             if (!raw || raw === '-')
                 continue;
-            const bucket = parked ? 'parked' : classifyMaturity(raw);
+            const bucket = parked ? 'parked' : classifySurface(raw);
             if (!bucket) {
                 warn(`features.${surface} unknown value ${JSON.stringify(raw)}`);
                 continue;
             }
             addToAggregate(bucketFor('features'), row, bucket);
-            addToAggregate(capability, row, bucket);
-        }
-    }
-    for (const key of ['backend', 'release', 'ops']) {
-        for (const row of tables[key]?.rows || []) {
-            const parked = phaseParked(row);
-            const bucket = parked ? 'parked' : classifyMaturity(row.Maturity || '');
-            if (!bucket) {
-                warn(`${key}.Maturity unknown value ${JSON.stringify(row.Maturity)}`);
-                continue;
-            }
-            addToAggregate(bucketFor(key), row, bucket);
-            addToAggregate(capability, row, bucket);
         }
     }
     for (const row of tables.subfeatures?.rows || []) {
@@ -152,7 +141,6 @@ export function computeProgress(tables) {
     for (const key of Object.keys(byTableMut))
         byTable[key] = finalizeAggregate(byTableMut[key]);
     return {
-        capability: finalizeAggregate(capability),
         delivery: finalizeAggregate(delivery),
         backlog: finalizeAggregate(backlog),
         byTable,

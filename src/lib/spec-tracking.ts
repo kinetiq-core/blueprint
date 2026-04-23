@@ -149,7 +149,6 @@ export function collectSpecTracking(specFiles: TrackingFile[]): TrackingResult {
         'Backend Group': data.roadmap_backend_group || data.roadmap_group || '',
         Capability: data.roadmap_backend_item || data.roadmap_item || '',
         Phase: data.roadmap_backend_phase || data.roadmap_phase || '',
-        Maturity: data.roadmap_backend_maturity || data.roadmap_maturity || '',
       })
     }
 
@@ -160,7 +159,6 @@ export function collectSpecTracking(specFiles: TrackingFile[]): TrackingResult {
         'Feature Group': data.roadmap_release_group || '',
         Feature: data.roadmap_release_item || '',
         Phase: data.roadmap_release_phase || '',
-        Maturity: data.roadmap_release_maturity || '',
       })
     }
 
@@ -171,7 +169,6 @@ export function collectSpecTracking(specFiles: TrackingFile[]): TrackingResult {
         'Feature Group': data.roadmap_ops_group || '',
         Feature: data.roadmap_ops_item || '',
         Phase: data.roadmap_ops_phase || '',
-        Maturity: data.roadmap_ops_maturity || '',
       })
     }
 
@@ -227,9 +224,9 @@ export function collectSpecTracking(specFiles: TrackingFile[]): TrackingResult {
     subfeatureRows,
     backlogRows,
     featureCsv: toCsv(['Spec', 'Feature Group', 'Feature', 'Phase', 'Mobile', 'Web'], featureRows),
-    backendCsv: toCsv(['Spec', 'Backend Group', 'Capability', 'Phase', 'Maturity'], backendRows),
-    releaseCsv: toCsv(['Spec', 'Area', 'Feature Group', 'Feature', 'Phase', 'Maturity'], releaseRows),
-    opsCsv: toCsv(['Spec', 'Area', 'Feature Group', 'Feature', 'Phase', 'Maturity'], opsRows),
+    backendCsv: toCsv(['Spec', 'Backend Group', 'Capability', 'Phase'], backendRows),
+    releaseCsv: toCsv(['Spec', 'Area', 'Feature Group', 'Feature', 'Phase'], releaseRows),
+    opsCsv: toCsv(['Spec', 'Area', 'Feature Group', 'Feature', 'Phase'], opsRows),
     futureCsv: toCsv(['Spec', 'Feature Group', 'Feature', 'Horizon', 'Notes'], futureRows),
     subfeatureCsv: toCsv(['Spec', 'Key', 'Subfeature', 'Surface', 'Status', 'Notes'], subfeatureRows),
     backlogCsv: toCsv(['Spec', 'Key', 'Type', 'Item', 'Status', 'Notes'], backlogRows),

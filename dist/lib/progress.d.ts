@@ -17,7 +17,6 @@ export type ProgressAggregate = {
     bySource: Record<string, ProgressCount>;
 };
 export type ProgressSnapshot = {
-    capability: ProgressAggregate;
     delivery: ProgressAggregate;
     backlog: ProgressAggregate;
     byTable: Record<string, ProgressAggregate>;

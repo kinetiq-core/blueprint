@@ -20,7 +20,6 @@ export type ProgressAggregate = {
 }
 
 export type ProgressSnapshot = {
-  capability: ProgressAggregate
   delivery: ProgressAggregate
   backlog: ProgressAggregate
   byTable: Record<string, ProgressAggregate>
@@ -36,12 +35,12 @@ function phaseParked(row: Row) {
   return String(row.Phase || '').trim().toLowerCase() === 'parked'
 }
 
-function classifyMaturity(value: string): ProgressBucket | null {
+function classifySurface(value: string): ProgressBucket | null {
   const v = stripDate(value).toLowerCase()
-  if (!v || v === '-') return null
-  if (v === 'ready') return 'shipped'
+  if (!v || v === '-' || v === '—') return null
+  if (v === 'ready' || v === 'done' || v === 'shipped') return 'shipped'
   if (v === 'beta') return 'beta'
-  if (v === 'alpha' || v === 'started') return 'alpha'
+  if (v === 'alpha' || v === 'started' || v === 'in progress') return 'alpha'
   if (v === 'planned' || v === 'draft' || v === 'placeholder') return 'planned'
   if (v === 'parked') return 'parked'
   return null
@@ -119,7 +118,6 @@ function warn(msg: string) {
 }
 
 export function computeProgress(tables: Record<string, { headers: string[]; rows: Row[] }>): ProgressSnapshot {
-  const capability = emptyAggregate()
   const delivery = emptyAggregate()
   const backlog = emptyAggregate()
   const byTableMut: Record<string, MutableAggregate> = {}
@@ -129,31 +127,20 @@ export function computeProgress(tables: Record<string, { headers: string[]; rows
     return byTableMut[tableKey]
   }
 
+  // Features: roll surface values up per-table. Under v2 there is no
+  // cross-spec 'Capability' axis — Delivery (subfeatures) is the honest
+  // rollup.
   for (const row of tables.features?.rows || []) {
     const parked = phaseParked(row)
     for (const surface of ['Mobile', 'Web'] as const) {
       const raw = String(row[surface] || '')
       if (!raw || raw === '-') continue
-      const bucket = parked ? 'parked' : classifyMaturity(raw)
+      const bucket = parked ? 'parked' : classifySurface(raw)
       if (!bucket) {
         warn(`features.${surface} unknown value ${JSON.stringify(raw)}`)
         continue
       }
       addToAggregate(bucketFor('features'), row, bucket)
-      addToAggregate(capability, row, bucket)
-    }
-  }
-
-  for (const key of ['backend', 'release', 'ops'] as const) {
-    for (const row of tables[key]?.rows || []) {
-      const parked = phaseParked(row)
-      const bucket = parked ? 'parked' : classifyMaturity(row.Maturity || '')
-      if (!bucket) {
-        warn(`${key}.Maturity unknown value ${JSON.stringify(row.Maturity)}`)
-        continue
-      }
-      addToAggregate(bucketFor(key), row, bucket)
-      addToAggregate(capability, row, bucket)
     }
   }
 
@@ -181,7 +168,6 @@ export function computeProgress(tables: Record<string, { headers: string[]; rows
   for (const key of Object.keys(byTableMut)) byTable[key] = finalizeAggregate(byTableMut[key])
 
   return {
-    capability: finalizeAggregate(capability),
     delivery: finalizeAggregate(delivery),
     backlog: finalizeAggregate(backlog),
     byTable,

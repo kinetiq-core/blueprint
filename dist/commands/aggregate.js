@@ -79,19 +79,19 @@ export async function aggregate(flags) {
         },
         backend: {
             title: 'Backend',
-            headers: ['Source', 'Repository', 'Spec', 'Backend Group', 'Capability', 'Phase', 'Maturity'],
+            headers: ['Source', 'Repository', 'Spec', 'Backend Group', 'Capability', 'Phase'],
             rows: backendRows,
             csvFile: 'backend.csv',
         },
         release: {
             title: 'Release',
-            headers: ['Source', 'Repository', 'Spec', 'Area', 'Feature Group', 'Feature', 'Phase', 'Maturity'],
+            headers: ['Source', 'Repository', 'Spec', 'Area', 'Feature Group', 'Feature', 'Phase'],
             rows: releaseRows,
             csvFile: 'release.csv',
         },
         ops: {
             title: 'Ops',
-            headers: ['Source', 'Repository', 'Spec', 'Area', 'Feature Group', 'Feature', 'Phase', 'Maturity'],
+            headers: ['Source', 'Repository', 'Spec', 'Area', 'Feature Group', 'Feature', 'Phase'],
             rows: opsRows,
             csvFile: 'ops.csv',
         },
