@@ -1297,7 +1297,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   .rollup-bar {
     display: inline-flex;
     width: 90px;
-    height: 4px;
+    height: 7px;
     border-radius: 999px;
     background: #E6ECEE;
     overflow: hidden;
@@ -2335,20 +2335,6 @@ function renderPreviewLeaf(spec: SpecMeta, isChild: boolean): string {
     `data-type="${escAttr(row.type || '—')}"`,
   ].join(' ')
 
-  const statusCell = (v: string) =>
-    v
-      ? `<span class="status-badge status-${statusTone(v)}">${escHtml(v)}</span>`
-      : '<span class="preview-empty">—</span>'
-
-  const anchorChips: string[] = []
-  if (spec.hasSubfeatures) {
-    anchorChips.push(`<a class="preview-anchor" href="${escHtml(spec.url)}#subfeatures" title="Jump to Subfeatures">sub</a>`)
-  }
-  if (spec.hasBacklog) {
-    anchorChips.push(`<a class="preview-anchor" href="${escHtml(spec.url)}#backlog" title="Jump to Backlog">log</a>`)
-  }
-  const anchorsCell = `<span class="preview-anchors">${anchorChips.join('')}</span>`
-
   const classes = `spec-tree-file preview-row${isChild ? ' preview-row--child' : ''}`
 
   return `<div class="${classes}" ${dataAttrs}>
@@ -2364,7 +2350,6 @@ function renderPreviewLeaf(spec: SpecMeta, isChild: boolean): string {
     <span class="preview-cell preview-cell-status">${renderSpecStatusCell(specStatsByPath.get(spec.specPath))}</span>
     <span class="preview-cell preview-cell-delivery">${renderSpecDeliveryCell(specStatsByPath.get(spec.specPath))}</span>
     <span class="preview-cell preview-cell-backlog">${renderSpecBacklogCell(specBacklogStatsByPath.get(spec.specPath))}</span>
-    ${anchorsCell}
   </div>`
 }
 
@@ -2512,17 +2497,17 @@ for (const section of sections) {
       <span class="preview-cell preview-cell-status">Status</span>
       <span class="preview-cell preview-cell-delivery">Delivery</span>
       <span class="preview-cell preview-cell-backlog">Backlog</span>
-      <span class="preview-anchors-spacer" aria-hidden="true"></span>
     </div>`
 
   const treeHtml = renderPreviewTreeNode(previewRoot, 0)
 
+  const heading = SINGLE_SOURCE_MODE ? 'Specs browser' : `${section.label} — Specs`
   const indexBody = `
     <section class="hero">
       <div class="eyebrow">Kinetiq Core</div>
       ${specsCrumbs}
-      <h1>${escHtml(section.label)} — Specs</h1>
-      <p class="subhead">${specs.length} spec file${specs.length === 1 ? '' : 's'}${section.source ? ` from ${escHtml(section.source.label)}` : ' across all configured sources'}. Filter by type, phase, or surface.</p>
+      <h1>${escHtml(heading)}</h1>
+      <p class="subhead">${specs.length} spec file${specs.length === 1 ? '' : 's'}${section.source ? ` from ${escHtml(section.source.label)}` : ' across all configured sources'}. Search by title, path, or item; filter by type.</p>
     </section>
     <section class="panel" id="specs-preview-root">
       ${filterBar}
@@ -2534,13 +2519,13 @@ for (const section of sections) {
 
   const indexPath = join(OUTPUT_DIR, indexUrl)
   ensureDir(dirname(indexPath))
-  writeFileSync(indexPath, pageShell(`${section.label} — Specs`, sections, section.slug, 'browse', indexBody, indexUrl))
+  writeFileSync(indexPath, pageShell(heading, sections, section.slug, 'browse', indexBody, indexUrl))
 
   searchIndex.push({
-    title: `${section.label} — Specs`,
+    title: heading,
     section: section.label,
     group: 'Specs',
-    snippet: `Filterable browser of ${specs.length} specs with roadmap metadata.`,
+    snippet: `Specs browser with ${specs.length} specs — search, filter by type, and jump to each spec.`,
     url: indexUrl,
   })
 }
@@ -2612,7 +2597,7 @@ function buildRootBreakdown(): string {
         <div class="breakdown-column">
           <div class="breakdown-column-head">
             <h3>${escHtml(section.label)}</h3>
-            <a class="breakdown-open" href="${browserHref}">Open filterable browser &rarr;</a>
+            <a class="breakdown-open" href="${browserHref}">Open Specs browser &rarr;</a>
           </div>
           ${l1Blocks}
         </div>`
