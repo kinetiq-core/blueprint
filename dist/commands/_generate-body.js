@@ -1132,13 +1132,11 @@ document.addEventListener('DOMContentLoaded', function() {
     color: var(--ink);
     text-align: left;
   }
-  .preview-cell-type { width: 74px; }
-  .preview-cell-group { width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .preview-cell-item { width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .preview-cell-phase { width: 78px; }
-  .preview-cell-surfaces { width: 120px; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .preview-cell-type { width: 90px; }
+  .preview-cell-item { width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .preview-cell-status { width: 130px; }
   .preview-cell-delivery { width: 120px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .preview-cell-backlog { width: 130px; }
   .rollup-bar-tight { width: 70px; }
   .spec-status-cell { display: inline-flex; align-items: center; gap: 8px; }
   .spec-status-count { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -1281,13 +1279,12 @@ document.addEventListener('DOMContentLoaded', function() {
   .breakdown-name-sub { font-weight: 500; padding-left: 16px; color: var(--muted); font-size: 13px; }
   .breakdown-count { font-size: 12px; color: var(--muted); }
   @media (max-width: 1200px) {
-    .preview-cell-group { width: 120px; }
-    .preview-cell-item { width: 140px; }
+    .preview-cell-item { width: 160px; }
   }
   @media (max-width: 960px) {
     .preview-header { display: none; }
     .spec-tree-preview .spec-tree-file { flex-wrap: wrap; }
-    .preview-cell-item, .preview-cell-group { display: none; }
+    .preview-cell-item { display: none; }
     .preview-row--child .preview-row-main { padding-left: 24px; }
   }
   .panel.content {
@@ -1556,6 +1553,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     const specBucketByPath = new Map();
     const specStatsByPath = new Map();
+    const specBacklogStatsByPath = new Map();
     {
         const rank = { shipped: 4, beta: 3, alpha: 2, planned: 1, parked: 0 };
         const subfeatureStatusToBucket = (status) => {
@@ -1609,6 +1607,39 @@ document.addEventListener('DOMContentLoaded', function() {
         for (const [key, s] of specStatsByPath) {
             s.bucket = specBucketByPath.get(key) || null;
         }
+        // Backlog stats — distinct vocabulary from subfeatures.
+        const classifyBacklog = (status) => {
+            const v = status.replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase();
+            if (!v)
+                return null;
+            if (v === 'resolved' || v === 'done' || v === 'closed')
+                return 'resolved';
+            if (v === 'in progress' || v === 'started' || v === 'drafted')
+                return 'inProgress';
+            if (v === 'open' || v === 'triaged' || v === 'planned')
+                return 'open';
+            if (v === 'parked' || v === 'deferred')
+                return 'parked';
+            return null;
+        };
+        for (const row of snapshot.tables.backlog?.rows || []) {
+            let s = specBacklogStatsByPath.get(row.Spec);
+            if (!s) {
+                s = { resolved: 0, inProgress: 0, open: 0, parked: 0, total: 0 };
+                specBacklogStatsByPath.set(row.Spec, s);
+            }
+            s.total += 1;
+            const b = classifyBacklog(String(row.Status || ''));
+            if (b)
+                s[b] += 1;
+        }
+    }
+    function renderSpecBacklogCell(stats) {
+        if (!stats || stats.total === 0)
+            return '<span class="preview-empty">—</span>';
+        const seg = (n, cls) => n > 0 ? `<span class="rollup-seg ${cls}" style="width:${(n / stats.total) * 100}%"></span>` : '';
+        const bar = `<span class="rollup-bar rollup-bar-tight">${seg(stats.resolved, 'shipped')}${seg(stats.inProgress, 'alpha')}${seg(stats.open, 'planned')}</span>`;
+        return `<span class="spec-status-cell">${bar}<span class="spec-status-count">${stats.resolved}/${stats.total}</span></span>`;
     }
     function renderSpecStatusCell(stats) {
         if (!stats || stats.total === 0)
@@ -2166,9 +2197,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const dataAttrs = [
             `data-search="${escAttr(searchText)}"`,
             `data-type="${escAttr(row.type || '—')}"`,
-            `data-phase="${escAttr(row.phase || '—')}"`,
-            `data-surfaces="${escAttr(row.surfaces || '—')}"`,
-            `data-horizon="${escAttr(row.horizon || '—')}"`,
         ].join(' ');
         const statusCell = (v) => v
             ? `<span class="status-badge status-${statusTone(v)}">${escHtml(v)}</span>`
@@ -2191,12 +2219,10 @@ document.addEventListener('DOMContentLoaded', function() {
       </span>
     </a>
     <span class="preview-cell preview-cell-type">${row.type ? `<span class="type-badge type-${escAttr(row.type)}">${escHtml(row.type)}</span>` : '<span class="preview-empty">—</span>'}</span>
-    <span class="preview-cell preview-cell-group" title="${escAttr(row.group)}">${row.group ? escHtml(row.group) : '<span class="preview-empty">—</span>'}</span>
     <span class="preview-cell preview-cell-item" title="${escAttr(row.item)}">${row.item ? escHtml(row.item) : '<span class="preview-empty">—</span>'}</span>
-    <span class="preview-cell preview-cell-phase">${statusCell(row.phase)}</span>
-    <span class="preview-cell preview-cell-surfaces">${row.surfaces ? escHtml(row.surfaces) : '<span class="preview-empty">—</span>'}</span>
     <span class="preview-cell preview-cell-status">${renderSpecStatusCell(specStatsByPath.get(spec.specPath))}</span>
     <span class="preview-cell preview-cell-delivery">${renderSpecDeliveryCell(specStatsByPath.get(spec.specPath))}</span>
+    <span class="preview-cell preview-cell-backlog">${renderSpecBacklogCell(specBacklogStatsByPath.get(spec.specPath))}</span>
     ${anchorsCell}
   </div>`;
     }
@@ -2320,14 +2346,10 @@ document.addEventListener('DOMContentLoaded', function() {
             { label: 'Specs' },
         ]);
         const typeValues = distinctValues(specs, (r) => r.type);
-        const phaseValues = distinctValues(specs, (r) => r.phase);
-        const surfaceValues = distinctValues(specs, (r) => r.surfaces);
         const filterBar = `
     <div class="preview-controls">
-      <input type="text" class="preview-search" placeholder="Filter by title, path, group, item…" />
+      <input type="text" class="preview-search" placeholder="Filter by title, path, item…" />
       ${renderFilterSelect('type', 'Type', typeValues)}
-      ${renderFilterSelect('phase', 'Phase', phaseValues)}
-      ${renderFilterSelect('surfaces', 'Surfaces', surfaceValues)}
       <button type="button" class="preview-reset">Reset</button>
       <span class="preview-count"><span class="preview-count-visible">${specs.length} of ${specs.length}</span> specs</span>
     </div>`;
@@ -2335,12 +2357,10 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="preview-header">
       <span class="preview-header-spec">Spec</span>
       <span class="preview-cell preview-cell-type">Type</span>
-      <span class="preview-cell preview-cell-group">Group</span>
       <span class="preview-cell preview-cell-item">Item</span>
-      <span class="preview-cell preview-cell-phase">Phase</span>
-      <span class="preview-cell preview-cell-surfaces">Surfaces</span>
       <span class="preview-cell preview-cell-status">Status</span>
       <span class="preview-cell preview-cell-delivery">Delivery</span>
+      <span class="preview-cell preview-cell-backlog">Backlog</span>
       <span class="preview-anchors-spacer" aria-hidden="true"></span>
     </div>`;
         const treeHtml = renderPreviewTreeNode(previewRoot, 0);

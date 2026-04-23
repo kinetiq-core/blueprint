@@ -215,7 +215,11 @@ function injectHeadingSlugs(html, slugger, headings) {
 }
 export function renderSpec(spec, index) {
     const markdown = readFileSync(spec.fullPath, 'utf8');
-    const { body } = parseFrontmatter(markdown);
+    const { body: rawBody } = parseFrontmatter(markdown);
+    // Hard-break consecutive metadata lines (`**Label:** value`) so they
+    // don't collapse into one wrapped paragraph. Without this, authors
+    // must remember to put two trailing spaces on every metadata line.
+    const body = rawBody.replace(/^(\*\*[^\n:*]+:\*\*[^\n]*)$/gm, '$1  ');
     marked.setOptions({ gfm: true, breaks: false });
     let html = marked.parse(body);
     const slugger = createSlugger();
