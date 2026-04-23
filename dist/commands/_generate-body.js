@@ -201,20 +201,8 @@ export async function generate(flags) {
         ].join('\n');
     }
     function buildSections(snapshot) {
-        const portfolio = {
-            slug: 'portfolio',
-            label: 'Portfolio',
-            pages: [{ key: 'index', label: 'Overview', href: routeFor('portfolio', 'index') }],
-        };
-        for (const key of TABLE_ORDER) {
-            const table = snapshot.tables[key];
-            if (table?.rows.length) {
-                portfolio.pages.push({ key, label: table.title, href: routeFor('portfolio', key) });
-            }
-        }
-        const sourceSections = snapshot.sources
-            .filter((source) => source.status === 'ok')
-            .map((source) => {
+        const okSources = snapshot.sources.filter((source) => source.status === 'ok');
+        const sourceSections = okSources.map((source) => {
             const slug = sourceSlug(source.id);
             const pages = [{ key: 'index', label: 'Overview', href: routeFor(slug, 'index') }];
             for (const key of TABLE_ORDER) {
@@ -233,6 +221,21 @@ export async function generate(flags) {
                 pages,
             };
         });
+        // Portfolio is the combined-sources view. When there's only one source it
+        // duplicates that source's section, so skip it.
+        if (okSources.length <= 1)
+            return sourceSections;
+        const portfolio = {
+            slug: 'portfolio',
+            label: 'Portfolio',
+            pages: [{ key: 'index', label: 'Overview', href: routeFor('portfolio', 'index') }],
+        };
+        for (const key of TABLE_ORDER) {
+            const table = snapshot.tables[key];
+            if (table?.rows.length) {
+                portfolio.pages.push({ key, label: table.title, href: routeFor('portfolio', key) });
+            }
+        }
         return [portfolio, ...sourceSections];
     }
     function sectionRows(section, table) {
@@ -1216,6 +1219,45 @@ document.addEventListener('DOMContentLoaded', function() {
   .rollup-seg.beta { background: #6FA9A1; }
   .rollup-seg.alpha { background: var(--accent); }
   .rollup-seg.planned { background: #BFC9CD; }
+  .breakdown-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 24px;
+  }
+  .breakdown-column-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .breakdown-column-head h3 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+  .breakdown-open { font-size: 12px; color: var(--muted); text-decoration: none; }
+  .breakdown-open:hover { color: var(--secondary); }
+  .breakdown-l1 { margin-bottom: 14px; }
+  .breakdown-l1:last-child { margin-bottom: 0; }
+  .breakdown-row {
+    display: grid;
+    grid-template-columns: 1fr auto 90px;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .breakdown-row:hover { background: rgba(24, 33, 38, 0.04); }
+  .breakdown-row-note {
+    color: var(--muted);
+    font-size: 12px;
+    grid-template-columns: 1fr auto;
+  }
+  .breakdown-row-note:hover { background: none; }
+  .breakdown-name { font-weight: 600; font-size: 14px; }
+  .breakdown-name-sub { font-weight: 500; padding-left: 16px; color: var(--muted); font-size: 13px; }
+  .breakdown-count { font-size: 12px; color: var(--muted); }
   @media (max-width: 1200px) {
     .preview-cell-group { width: 120px; }
     .preview-cell-item { width: 140px; }
@@ -2127,6 +2169,13 @@ document.addEventListener('DOMContentLoaded', function() {
     selects.forEach(function (s) { s.value = ''; });
     apply();
   });
+
+  var params = new URLSearchParams(window.location.search);
+  var initialQ = params.get('q');
+  if (initialQ && searchInput) {
+    searchInput.value = initialQ;
+    apply();
+  }
 })();
 </script>`;
     for (const section of sections) {
@@ -2205,26 +2254,73 @@ document.addEventListener('DOMContentLoaded', function() {
             url: indexUrl,
         });
     }
-    const rootCards = sections
-        .map((section) => {
-        const rowCount = TABLE_ORDER.reduce((sum, key) => {
-            const table = snapshot.tables[key];
-            return sum + (table ? sectionRows(section, table).length : 0);
-        }, 0);
-        const progress = getProgressCount(snapshot, 'capability', section.source?.id);
-        const progressHtml = renderProgress(progress, { compact: true });
-        const specCount = section.source
-            ? (specsBySource.get(section.source.id) || []).length
-            : allSpecs.length;
-        return `
-      <a class="card" href="${section.pages[0]?.href}">
-        <h2>${escHtml(section.label)}</h2>
-        <p>${rowCount} tracked rows · ${specCount} spec pages</p>
-        ${progressHtml}
-        <div class="jump">Open ${escHtml(section.label)} &rarr;</div>
-      </a>`;
-    })
-        .join('');
+    // Build an L1/L2 breakdown for each source-backed section: L1 = top-level
+    // folders in the spec tree (e.g. engine, library); L2 = their direct child
+    // folders (e.g. engine/features, engine/ops). Each L2 entry links into the
+    // filterable browser with a ?q=<path> prefill.
+    function buildRootBreakdown() {
+        const sourceSections = sections.filter((s) => s.source);
+        if (!sourceSections.length)
+            return '';
+        const columns = sourceSections
+            .map((section) => {
+            const specs = specsBySource.get(section.source.id) || [];
+            if (!specs.length)
+                return '';
+            const tree = newTreeNode('');
+            for (const spec of specs) {
+                let segments = spec.relPath.split('/').filter(Boolean);
+                if (segments[0] === 'specs')
+                    segments = segments.slice(1);
+                const folderSegments = segments.slice(0, -1);
+                insertSpec(tree, folderSegments, spec);
+            }
+            const browserHref = routeFor(section.slug, 'specs');
+            const link = (q, inner) => `<a class="breakdown-row" href="${browserHref}?q=${encodeURIComponent(q)}">${inner}</a>`;
+            const l1Nodes = Array.from(tree.children.values()).sort((a, b) => a.name.localeCompare(b.name));
+            const l1Blocks = l1Nodes.map((l1) => {
+                const l1Count = countTreeFiles(l1);
+                const l1Roll = rollupTreeNode(l1);
+                const l1Bar = renderRollupBar(l1Roll);
+                const l1Header = link(l1.name, `<span class="breakdown-name">${escHtml(l1.name)}</span>
+           <span class="breakdown-count">${l1Count} spec${l1Count === 1 ? '' : 's'}</span>
+           ${l1Bar}`);
+                const l2Nodes = Array.from(l1.children.values()).sort((a, b) => a.name.localeCompare(b.name));
+                const looseCount = l1.files.length;
+                const l2Rows = l2Nodes
+                    .map((l2) => {
+                    const count = countTreeFiles(l2);
+                    const bar = renderRollupBar(rollupTreeNode(l2));
+                    return link(`${l1.name}/${l2.name}`, `<span class="breakdown-name breakdown-name-sub">${escHtml(l2.name)}</span>
+               <span class="breakdown-count">${count} spec${count === 1 ? '' : 's'}</span>
+               ${bar}`);
+                })
+                    .join('');
+                const looseRow = looseCount && l2Nodes.length
+                    ? `<div class="breakdown-row breakdown-row-note"><span class="breakdown-name breakdown-name-sub">(loose)</span><span class="breakdown-count">${looseCount} spec${looseCount === 1 ? '' : 's'} directly under ${escHtml(l1.name)}/</span></div>`
+                    : '';
+                return `
+          <div class="breakdown-l1">
+            ${l1Header}
+            ${l2Rows}${looseRow}
+          </div>`;
+            }).join('');
+            return `
+        <div class="breakdown-column">
+          <div class="breakdown-column-head">
+            <h3>${escHtml(section.label)}</h3>
+            <a class="breakdown-open" href="${browserHref}">Open filterable browser &rarr;</a>
+          </div>
+          ${l1Blocks}
+        </div>`;
+        })
+            .filter(Boolean)
+            .join('');
+        return columns
+            ? `<section class="panel"><h2>Specs by area</h2><div class="breakdown-grid">${columns}</div></section>`
+            : '';
+    }
+    const rootBreakdown = buildRootBreakdown();
     const overallCapability = snapshot.progress.capability.all;
     const overallDelivery = snapshot.progress.delivery.all;
     const overallBacklog = snapshot.progress.backlog.all;
@@ -2253,7 +2349,7 @@ document.addEventListener('DOMContentLoaded', function() {
   <section class="hero">
     <div class="eyebrow">Kinetiq Core</div>
     <h1>Roadmaps</h1>
-    <p class="subhead">Cross-repo roadmap views generated in <code>kinetiq-business</code> from committed snapshot data. Use Portfolio for combined planning, or open a repo section to isolate a workstream.</p>
+    <p class="subhead">Living blueprints across the product. Overall progress summarises capability, delivery, and backlog; the breakdown lists top-level and second-level spec folders with a release-aware status bar.</p>
     <div class="meta">Snapshot generated ${escHtml(snapshot.generatedAt)} via ${escHtml(snapshot.generatedBy)}</div>
     ${PROGRESS_LEGEND_HTML}
     <div class="links">
@@ -2261,9 +2357,9 @@ document.addEventListener('DOMContentLoaded', function() {
       <a href="roadmaps.json">Snapshot JSON</a>
       <a href="search.html">Search</a>
     </div>
-    <div class="grid">${rootCards}</div>
   </section>
   ${overallProgressPanel}
+  ${rootBreakdown}
   <section class="panel">
     <h2>Sources</h2>
     <div class="source-list">${rootSourceRows || '<p>No sources recorded.</p>'}</div>
