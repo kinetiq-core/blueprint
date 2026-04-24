@@ -33,5 +33,8 @@
       }
     }
   },
-  "postCreateCommand": "npm install"
+  // Warn (non-blocking) if the repo wasn't cloned under kinetiq-core/ —
+  // sibling repos won't be visible under /workspaces/kinetiq-core/ and
+  // cross-repo references will silently break.
+  "postCreateCommand": "test -d /workspaces/kinetiq-core/kinetiq-specs || echo '[WARN] kinetiq-specs not found alongside this repo. Parent dir should be kinetiq-core/ — see kinetiq-platform/docs/WORKSPACE.md'; npm install"
 }
