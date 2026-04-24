@@ -5,9 +5,16 @@ services:
       dockerfile: Dockerfile
     command: sleep infinity
     volumes:
-      # The blueprint repo itself. No sibling mounts — this is a
-      # standalone lib/CLI that does not consume other kinetiq repos.
-      - ..:/workspaces/kinetiq-core/blueprint:cached
+      # Mount the whole kinetiq-core parent dir so in-container Claude can
+      # cross-reference sibling repos (specs, library, business, etc.) as
+      # first-class RW dirs. Trade-off: exposes unrelated siblings; accepted
+      # for simplicity (no per-sibling mount maintenance as new repos land).
+      # REQUIRES this repo to live at kinetiq-core/<stack>/ on host.
+      - ../..:/workspaces/kinetiq-core:cached
+
+      # Named volume for node_modules — shadows the repo's node_modules dir
+      # inside the parent mount. Keeps Linux-container binaries separate
+      # from any Windows-host install.
       - blueprint-node-modules:/workspaces/kinetiq-core/blueprint/node_modules
 
 volumes:
