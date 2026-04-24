@@ -1,0 +1,37 @@
+// Dev Container for blueprint (@kinetiq-core/blueprint).
+//
+// Standalone CLI tool (tsx/TypeScript); no web server, no database, no
+// sibling-repo mounts (blueprint does not consume kinetiq-specs). No
+// forwarded ports — if a server is ever added later, pick a port well
+// outside the kinetiq web stacks' 43xx range (see memory: port scheme).
+{
+  "name": "blueprint",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/kinetiq-core/blueprint",
+  "remoteUser": "node",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "mounts": [
+    "source=${localEnv:USERPROFILE}${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind,consistency=cached",
+    "source=${localEnv:USERPROFILE}${localEnv:HOME}/.gitconfig,target=/home/node/.gitconfig,type=bind,consistency=cached",
+    "source=${localEnv:USERPROFILE}${localEnv:HOME}/.ssh,target=/home/node/.ssh,type=bind,readonly",
+    "source=${localEnv:APPDATA}/GitHub CLI,target=/home/node/.config/gh,type=bind,consistency=cached"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "anthropic.claude-code"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  "postCreateCommand": "npm install"
+}

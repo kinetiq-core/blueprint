@@ -1,0 +1,14 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sleep infinity
+    volumes:
+      # The blueprint repo itself. No sibling mounts — this is a
+      # standalone lib/CLI that does not consume other kinetiq repos.
+      - ..:/workspaces/kinetiq-core/blueprint:cached
+      - blueprint-node-modules:/workspaces/kinetiq-core/blueprint/node_modules
+
+volumes:
+  blueprint-node-modules:
