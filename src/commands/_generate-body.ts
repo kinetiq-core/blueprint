@@ -423,7 +423,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function buildTopbar(sections: Section[], activeSectionSlug: string) {
   const links = [
-    `<a href="index.html" class="${activeSectionSlug === 'root' ? 'active' : ''}">Overview</a>`,
+    `<a href="index.html" class="${activeSectionSlug === 'root' ? 'active' : ''}">Dashboard</a>`,
     ...sections.map((section) => `<a href="${section.pages[0]?.href}" class="${section.slug === activeSectionSlug ? 'active' : ''}">${escHtml(section.label)}</a>`),
   ].join('')
 
@@ -439,6 +439,7 @@ function buildTopbar(sections: Section[], activeSectionSlug: string) {
       <span class="search-kbd">⌘K</span>
       <div class="search-results"></div>
     </div>
+    <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch theme">Signal</button>
   </div>`
 }
 
@@ -452,7 +453,7 @@ function buildSidebar(sections: Section[], activeSectionSlug: string, activePage
     <div class="sidebar-nav">
       <div class="nav-section">
         <div class="nav-section-title">Overview</div>
-        <a href="index.html" class="sidebar-link ${activeSectionSlug === 'root' && activePageKey === 'index' ? 'active' : ''}">Contents</a>
+        <a href="index.html" class="sidebar-link ${activeSectionSlug === 'root' && activePageKey === 'index' ? 'active' : ''}">Dashboard</a>
         <a href="search.html" class="sidebar-link ${activeSectionSlug === 'root' && activePageKey === 'search' ? 'active' : ''}">Search</a>
       </div>
       ${sections
@@ -460,10 +461,18 @@ function buildSidebar(sections: Section[], activeSectionSlug: string, activePage
       <div class="nav-section">
         <div class="nav-section-title">${escHtml(section.label)}</div>
         ${section.pages
+          .filter((page) => page.key !== 'schema')
           .map((page) => `<a href="${page.href}" class="sidebar-link ${section.slug === activeSectionSlug && page.key === activePageKey ? 'active' : ''}">${escHtml(page.label)}</a>`)
           .join('')}
       </div>`)
         .join('')}
+      <div class="nav-section">
+        <div class="nav-section-title">Reference</div>
+        ${sections
+          .flatMap((section) => section.pages.filter((page) => page.key === 'schema').map((page) => ({ section, page })))
+          .map(({ section, page }) => `<a href="${page.href}" class="sidebar-link ${section.slug === activeSectionSlug && page.key === activePageKey ? 'active' : ''}">${escHtml(section.label === 'Specs' ? page.label : `${section.label} ${page.label}`)}</a>`)
+          .join('')}
+      </div>
     </div>
   </aside>`
 }
@@ -478,30 +487,109 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${escHtml(title)}</title>
 <base href="${baseHref}">
+<script>
+(function() {
+  try {
+    var theme = localStorage.getItem('productTruthTheme') || 'classic';
+    document.documentElement.dataset.theme = theme;
+  } catch (e) {
+    document.documentElement.dataset.theme = 'classic';
+  }
+})();
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
   :root {
-    --bg: #f6f7f4;
-    --surface: #ffffff;
-    --paper: #ffffff;
+    --bg: #F4F6F7;
+    --surface: #FFFFFF;
+    --paper: #FFFFFF;
+    --panel-bg: #FFFFFF;
+    --panel-subtle: #F7F9FA;
+    --tile-bg: #F7F9FA;
+    --content-card-bg: #FFFFFF;
+    --content-card-hover-bg: #FAFCFC;
+    --table-header-bg: #F0F4F6;
+    --table-header-text: #4E606B;
+    --control-bg: #F7F9FA;
+    --hover-bg: rgba(24, 33, 38, 0.05);
     --ink: #152028;
     --muted: #5E6A72;
-    --accent: #C96F3B;
+    --accent: #B75F32;
     --secondary: #2F7C7A;
+    --primary: #315C8A;
+    --critical: #9F3D2E;
+    --success: #2F7C7A;
+    --warning: #B75F32;
+    --info: #315C8A;
+    --progress-beta: #6FA9A1;
+    --progress-planned: #BFC9CD;
+    --code-bg: #182126;
+    --code-fg: #F7F9FA;
+    --focus: #315C8A;
     --border: #D7E0E3;
     --line: #D7E0E3;
-    --sidebar-bg: #F7F9FA;
-    --sidebar-text: #5E6A72;
-    --sidebar-active: #182126;
+    --nav-bg: #F7F9FA;
+    --nav-text: #5E6A72;
+    --nav-active: #182126;
+    --nav-border: #D7E0E3;
+    --nav-hover-bg: rgba(24, 33, 38, 0.05);
+    --sidebar-bg: var(--nav-bg);
+    --sidebar-text: var(--nav-text);
+    --sidebar-active: var(--nav-active);
+    --input-bg: #FFFFFF;
+    --input-placeholder: #8A9BA3;
+    --shadow-panel: none;
     --topbar-height: 52px;
+  }
+
+  html[data-theme="signal"] {
+    --bg: #EDF5FA;
+    --surface: #FFFFFF;
+    --paper: #FFFFFF;
+    --panel-bg: #FFFFFF;
+    --panel-subtle: #ECF6FA;
+    --tile-bg: #F0F8FF;
+    --content-card-bg: #FFFFFF;
+    --content-card-hover-bg: #F6FBFF;
+    --table-header-bg: #E7F1F8;
+    --table-header-text: #334A5C;
+    --control-bg: #ECF6FA;
+    --hover-bg: rgba(36, 107, 254, 0.08);
+    --ink: #10202B;
+    --muted: #607381;
+    --accent: #F59E0B;
+    --secondary: #00A99D;
+    --primary: #246BFE;
+    --critical: #E5484D;
+    --success: #16A34A;
+    --warning: #F59E0B;
+    --info: #7C3AED;
+    --progress-beta: #38BDF8;
+    --progress-planned: #A9B7C4;
+    --code-bg: #0B1724;
+    --code-fg: #EAF7FF;
+    --focus: #246BFE;
+    --border: #C9DDEA;
+    --line: #C9DDEA;
+    --nav-bg: #0F1F2E;
+    --nav-text: #B9C7D3;
+    --nav-active: #FFFFFF;
+    --nav-border: rgba(255,255,255,0.12);
+    --nav-hover-bg: rgba(255,255,255,0.08);
+    --sidebar-bg: #102235;
+    --sidebar-text: #B9C7D3;
+    --sidebar-active: #FFFFFF;
+    --input-bg: #FFFFFF;
+    --input-placeholder: #7890A0;
+    --shadow-panel: 0 18px 44px rgba(16, 32, 43, 0.08);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { min-height: 100%; }
   body {
     font-family: 'Inter', -apple-system, sans-serif;
-    background: linear-gradient(180deg, #eef3f2 0%, var(--bg) 32%, #f8f8f5 100%);
+    background: var(--bg);
     color: var(--ink);
     line-height: 1.7;
     display: flex;
@@ -512,75 +600,91 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   .topbar {
     position: fixed; top: 0; left: 0; right: 0;
     min-height: 52px;
-    background: #F7F9FA; z-index: 25;
+    background: var(--nav-bg); z-index: 25;
     display: flex; align-items: stretch; flex-wrap: wrap;
-    border-bottom: 1px solid #D7E0E3;
+    border-bottom: 1px solid var(--nav-border);
   }
   .topbar-breadcrumb { display: none; }
   .topbar-brand {
     width: 260px; flex-shrink: 0;
     display: flex; align-items: center; gap: 10px;
     padding: 0 20px 0 24px;
-    border-right: 1px solid #D7E0E3;
+    border-right: 1px solid var(--nav-border);
   }
   .topbar-menu-btn {
-    display: none; background: none; border: none; color: #182126;
+    display: none; background: none; border: none; color: var(--nav-active);
     font-size: 17px; cursor: pointer; padding: 4px 6px; line-height: 1;
     border-radius: 6px; flex-shrink: 0;
   }
-  .topbar-menu-btn:hover { background: rgba(24,33,38,0.06); }
+  .topbar-menu-btn:hover { background: var(--nav-hover-bg); }
   .topbar-wordmark {
     font-size: 13px; font-weight: 800; letter-spacing: 0.16em;
-    text-transform: uppercase; color: #182126; text-decoration: none; white-space: nowrap;
+    text-transform: uppercase; color: var(--nav-active); text-decoration: none; white-space: nowrap;
   }
   .topbar-nav {
     flex: 1; display: flex; align-items: center; padding: 0 12px; gap: 2px;
   }
   .topbar-nav a {
     padding: 5px 11px; font-size: 13px; font-weight: 600;
-    color: #5E6A72; text-decoration: none;
+    color: var(--nav-text); text-decoration: none;
     border-radius: 6px; transition: all 0.1s; white-space: nowrap;
   }
-  .topbar-nav a:hover { color: #182126; background: rgba(24,33,38,0.05); }
-  .topbar-nav a.active { color: #182126; }
+  .topbar-nav a:hover { color: var(--nav-active); background: var(--nav-hover-bg); }
+  .topbar-nav a.active { color: var(--nav-active); }
   .topbar-search {
     position: relative; display: flex; align-items: center;
     padding: 0 20px 0 12px; gap: 8px;
-    border-left: 1px solid #D7E0E3;
+    border-left: 1px solid var(--nav-border);
   }
   .topbar-search .search-input {
     width: 340px; padding: 8px 14px;
-    border: 1px solid #D7E0E3; border-radius: 8px;
-    font-size: 13.5px; font-family: inherit; background: white;
-    color: #182126; outline: none; box-sizing: border-box;
+    border: 1px solid var(--line); border-radius: 8px;
+    font-size: 13.5px; font-family: inherit; background: var(--input-bg);
+    color: var(--ink); outline: none; box-sizing: border-box;
   }
-  .topbar-search .search-input::placeholder { color: #8A9BA3; }
-  .topbar-search .search-input:focus { border-color: #C96F3B; box-shadow: 0 0 0 3px rgba(201,111,59,0.1); }
+  .topbar-search .search-input::placeholder { color: var(--input-placeholder); }
+  .topbar-search .search-input:focus { border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 14%, transparent); }
   .search-kbd {
-    font-size: 11px; font-weight: 600; color: #8A9BA3;
-    background: #F0F4F5; border: 1px solid #D7E0E3;
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    background: var(--panel-subtle); border: 1px solid var(--line);
     border-radius: 4px; padding: 2px 6px; white-space: nowrap;
     pointer-events: none; flex-shrink: 0;
   }
+  .theme-toggle {
+    align-self: center;
+    margin-right: 16px;
+    border: 1px solid var(--nav-border);
+    background: color-mix(in srgb, var(--primary) 18%, transparent);
+    color: var(--nav-active);
+    border-radius: 7px;
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .theme-toggle:hover { background: color-mix(in srgb, var(--primary) 30%, transparent); }
   .topbar-search .search-results {
     position: absolute; top: calc(100% + 4px); right: 20px; left: 12px; z-index: 100;
-    background: white; border: 1px solid #D7E0E3;
+    background: var(--panel-bg); border: 1px solid var(--line);
     border-radius: 8px; max-height: 360px; overflow-y: auto;
     box-shadow: 0 12px 32px rgba(24,33,38,0.12); display: none;
   }
   .topbar-search .search-results.active { display: block; }
   .topbar-search .search-result-item {
     display: block; padding: 11px 12px; text-decoration: none;
-    border-bottom: 1px solid #E8EEF0; color: #182126;
+    border-bottom: 1px solid var(--line); color: var(--ink);
   }
   .topbar-search .search-result-item:last-child { border-bottom: 0; }
   .topbar-search .search-result-item.highlighted,
-  .topbar-search .search-result-item:hover { background: #F7F9FA; }
+  .topbar-search .search-result-item:hover { background: var(--panel-subtle); }
   .search-result-name {
-    display: block; color: #182126; font-size: 13px; font-weight: 700;
+    display: block; color: var(--ink); font-size: 13px; font-weight: 700;
   }
   .search-result-section {
-    display: block; margin-top: 3px; color: #5E6A72; font-size: 11px;
+    display: block; margin-top: 3px; color: var(--muted); font-size: 11px;
   }
   .layout {
     display: block;
@@ -590,7 +694,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   .sidebar {
     width: 260px;
     background: var(--sidebar-bg);
-    border-right: 1px solid #D7E0E3;
+    border-right: 1px solid var(--nav-border);
     position: fixed;
     top: 0;
     left: 0;
@@ -603,7 +707,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   .sidebar-header {
     flex-shrink: 0;
     padding: calc(var(--topbar-height) + 16px) 24px 20px;
-    border-bottom: 1px solid #D7E0E3;
+    border-bottom: 1px solid var(--nav-border);
     background: var(--sidebar-bg);
   }
   .nav-section { margin-bottom: 8px; }
@@ -613,7 +717,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1.5px;
-    color: #2F7C7A;
+    color: var(--secondary);
   }
   .sidebar-back {
     font-size: 11px;
@@ -657,33 +761,33 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   }
   .sidebar-link:hover {
     color: var(--sidebar-active);
-    background: rgba(24,33,38,0.04);
+    background: var(--nav-hover-bg);
   }
   .sidebar-link.active {
     color: var(--sidebar-active);
     font-weight: 600;
-    background: rgba(24,33,38,0.06);
-    border-left-color: #C96F3B;
+    background: var(--nav-hover-bg);
+    border-left-color: var(--accent);
   }
   .main {
     width: calc(100% - 260px);
     margin-left: 260px;
-    padding: calc(var(--topbar-height) + 32px) 0 64px;
+    padding: calc(var(--topbar-height) + 22px) 0 64px;
   }
   .shell {
     width: 100%;
-    max-width: 1440px;
+    max-width: 1480px;
     margin: 0 auto;
-    padding: 0 32px;
+    padding: 0 28px;
   }
   .hero, .panel {
-    background: rgba(255, 255, 255, 0.78);
-    border: 1px solid rgba(215, 224, 227, 0.95);
-    border-radius: 24px;
-    box-shadow: 0 18px 60px rgba(21, 32, 40, 0.06);
+    background: var(--panel-bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: var(--shadow-panel);
   }
-  .hero { padding: 56px 40px 36px; }
-  .panel { padding: 28px 28px 24px; margin-top: 20px; }
+  .hero { padding: 30px 32px 26px; }
+  .panel { padding: 22px; margin-top: 16px; }
   .eyebrow {
     font-size: 13px;
     font-weight: 700;
@@ -692,15 +796,15 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     color: var(--muted);
   }
   h1 {
-    margin-top: 16px;
-    font-size: clamp(40px, 6vw, 64px);
-    line-height: 0.98;
-    letter-spacing: -0.04em;
+    margin-top: 12px;
+    font-size: 38px;
+    line-height: 1.08;
+    letter-spacing: 0;
   }
   .subhead {
-    margin-top: 18px;
+    margin-top: 12px;
     max-width: 900px;
-    font-size: 18px;
+    font-size: 16px;
     color: var(--muted);
   }
   .meta {
@@ -718,7 +822,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     display: block;
     text-decoration: none;
     color: inherit;
-    background: #fff;
+    background: var(--panel-bg);
     border: 1px solid var(--line);
     border-radius: 18px;
     padding: 22px 20px;
@@ -752,10 +856,108 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     color: inherit;
     border: 1px solid var(--line);
     border-radius: 8px;
-    background: #fff;
+    background: var(--panel-bg);
     padding: 16px;
   }
-  .insight-card:hover { border-color: var(--secondary); background: #FAFCFC; }
+  .insight-card:hover { border-color: var(--secondary); background: var(--panel-subtle); }
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .dashboard-stack {
+    display: grid;
+    gap: 16px;
+    align-content: start;
+  }
+  .dashboard-panel {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-bg);
+    padding: 16px;
+  }
+  .dashboard-panel h2, .dashboard-panel h3 {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin: 0 0 10px;
+  }
+  .dashboard-note {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .risk-list {
+    display: grid;
+    gap: 8px;
+  }
+  .risk-item {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .risk-item:last-child { border-bottom: 0; }
+  .risk-score {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 24px;
+    border-radius: 5px;
+    background: rgba(159, 61, 46, 0.10);
+    color: var(--critical);
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .risk-title {
+    min-width: 0;
+  }
+  .risk-title a {
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .risk-title a:hover { color: var(--secondary); }
+  .risk-meta {
+    color: var(--muted);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .signal-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  .signal-tile {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+    background: var(--content-card-bg);
+  }
+  .signal-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .signal-value {
+    margin-top: 7px;
+    color: var(--ink);
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+  }
   .insight-label {
     font-size: 11px;
     font-weight: 800;
@@ -782,7 +984,18 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     gap: 20px;
     margin-top: 20px;
   }
-  .lens-stack { display: grid; gap: 14px; }
+  .lens-stack { display: grid; gap: 14px; min-width: 0; }
+  .release-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .release-grid .lens-table { table-layout: fixed; }
+  .release-grid .lens-table th:first-child,
+  .release-grid .lens-table td:first-child {
+    overflow-wrap: anywhere;
+  }
+  .release-grid .lens-table th:last-child,
+  .release-grid .lens-table td:last-child {
+    width: 70px;
+    text-align: right;
+  }
   .lens-table {
     width: 100%;
     border-collapse: collapse;
@@ -795,9 +1008,9 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--table-header-text);
     border-bottom: 1px solid var(--line);
-    background: var(--sidebar-bg);
+    background: var(--table-header-bg);
   }
   .lens-table td {
     padding: 10px;
@@ -808,6 +1021,41 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   .lens-table a:hover { color: var(--secondary); }
   .lens-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .lens-muted { color: var(--muted); font-size: 12px; }
+  .lens-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--control-bg);
+    margin: 14px 0;
+  }
+  .lens-search {
+    flex: 1 1 260px;
+    min-width: 220px;
+    padding: 8px 11px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--input-bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    outline: none;
+  }
+  .lens-search:focus {
+    border-color: var(--focus);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 14%, transparent);
+  }
+  .lens-count {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .lens-count strong {
+    color: var(--ink);
+  }
   .maturity-strip {
     display: grid;
     grid-template-columns: repeat(11, minmax(40px, 1fr));
@@ -928,8 +1176,9 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     border: 1px solid var(--line);
     border-radius: 7px;
     padding: 10px;
-    background: var(--sidebar-bg);
+    background: var(--content-card-bg);
   }
+  .kanban-card:hover { border-color: var(--primary); background: var(--content-card-hover-bg); }
   .kanban-card a {
     color: var(--ink);
     text-decoration: none;
@@ -992,6 +1241,87 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     overflow-wrap: anywhere;
   }
   .schema-desc { color: var(--muted); line-height: 1.45; }
+  .governance-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .governance-row {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .governance-row:last-child { border-bottom: 0; }
+  .governance-level {
+    width: 30px;
+    height: 26px;
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(201, 111, 59, 0.12);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 850;
+  }
+  .governance-title { font-size: 13px; font-weight: 750; color: var(--ink); }
+  .governance-note { color: var(--muted); font-size: 12px; line-height: 1.35; }
+  .spec-record {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .spec-record-main, .spec-record-side {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    padding: 16px;
+  }
+  .spec-record-main h2, .spec-record-side h2 {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+  .spec-record-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  .spec-record-field {
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 10px;
+    background: var(--content-card-bg);
+    min-width: 0;
+  }
+  .spec-record-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .spec-record-value {
+    margin-top: 6px;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 750;
+    overflow-wrap: anywhere;
+  }
+  .spec-record-path {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    overflow-wrap: anywhere;
+  }
   .work-list {
     display: grid;
     gap: 10px;
@@ -1025,6 +1355,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   .metric-pill.good { background: rgba(47, 124, 122, 0.12); color: var(--secondary); }
   @media (max-width: 1180px) {
     .insight-grid { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+    .dashboard-grid, .spec-record { grid-template-columns: 1fr; }
     .lens-grid { grid-template-columns: 1fr; }
     .kanban-board { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
   }
@@ -1035,6 +1366,8 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     .area-row .area-dot:nth-of-type(n+5), .area-row .area-col-label:nth-of-type(n+5) { display: none; }
     .kanban-board { grid-template-columns: 1fr; }
     .schema-grid { grid-template-columns: 1fr; }
+    .signal-grid, .spec-record-grid { grid-template-columns: 1fr; }
+    .governance-row, .risk-item { grid-template-columns: 1fr; }
     .schema-field { grid-template-columns: 1fr; gap: 4px; }
     .work-row { grid-template-columns: 1fr 70px; }
     .work-row > :nth-child(3), .work-row > :nth-child(4) { display: none; }
@@ -1179,7 +1512,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     display: flex;
     height: 10px;
     border-radius: 999px;
-    background: #E6ECEE;
+    background: var(--panel-subtle);
     overflow: hidden;
   }
   .progress-compact .progress-bar {
@@ -1187,9 +1520,9 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   }
   .progress-seg { display: block; height: 100%; }
   .progress-seg.shipped { background: var(--secondary); }
-  .progress-seg.beta { background: #6FA9A1; }
+  .progress-seg.beta { background: var(--progress-beta); }
   .progress-seg.alpha { background: var(--accent); }
-  .progress-seg.planned { background: #BFC9CD; }
+  .progress-seg.planned { background: var(--progress-planned); }
   .progress-seg.empty { background: transparent; }
   .progress-meta {
     margin-top: 10px;
@@ -1250,9 +1583,9 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     flex-shrink: 0;
   }
   .progress-legend-swatch.shipped { background: var(--secondary); }
-  .progress-legend-swatch.beta { background: #6FA9A1; }
+  .progress-legend-swatch.beta { background: var(--progress-beta); }
   .progress-legend-swatch.alpha { background: var(--accent); }
-  .progress-legend-swatch.planned { background: #BFC9CD; }
+  .progress-legend-swatch.planned { background: var(--progress-planned); }
   .progress-legend-swatch.parked {
     background: transparent;
     border: 1px dashed #8A9BA3;
@@ -1527,9 +1860,9 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   .spec-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .spec-table thead th {
     text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 700;
-    letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--table-header-text);
     border-bottom: 1px solid var(--line); white-space: nowrap;
-    background: var(--sidebar-bg);
+    background: var(--table-header-bg);
   }
   .spec-table tbody td {
     padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle;
@@ -1677,16 +2010,16 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     width: 90px;
     height: 7px;
     border-radius: 999px;
-    background: #E6ECEE;
+    background: var(--panel-subtle);
     overflow: hidden;
     margin-left: auto;
   }
   .preview-folder .spec-tree-folder-count { margin-left: 10px; }
   .rollup-seg { display: block; height: 100%; }
   .rollup-seg.shipped { background: var(--secondary); }
-  .rollup-seg.beta { background: #6FA9A1; }
+  .rollup-seg.beta { background: var(--progress-beta); }
   .rollup-seg.alpha { background: var(--accent); }
-  .rollup-seg.planned { background: #BFC9CD; }
+  .rollup-seg.planned { background: var(--progress-planned); }
   .breakdown-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
@@ -1807,10 +2140,10 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   .legal-footer {
     margin-top: 24px;
     padding: 18px 20px;
-    border: 1px solid rgba(215, 224, 227, 0.95);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.82);
-    box-shadow: 0 10px 28px rgba(21, 32, 40, 0.04);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-bg);
+    box-shadow: var(--shadow-panel);
   }
   .legal-footer-title {
     font-size: 11px;
@@ -1848,6 +2181,10 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
       width: 100%;
       min-width: 0;
     }
+    .theme-toggle {
+      margin-right: 12px;
+      padding: 7px 9px;
+    }
     .sidebar {
       top: 52px;
       left: 0;
@@ -1877,13 +2214,17 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     }
     .topbar-brand {
       width: 100%;
-      border-bottom: 1px solid var(--line);
+      border-bottom: 1px solid var(--nav-border);
       padding: 14px 18px;
     }
     .topbar-nav { padding: 10px 12px 12px; }
     .topbar-search {
-      border-top: 1px solid #D7E0E3;
+      border-top: 1px solid var(--nav-border);
       padding: 12px;
+    }
+    .theme-toggle {
+      margin: 0 12px 12px;
+      width: calc(100% - 24px);
     }
     .topbar-search .search-input { width: 100%; }
     .topbar-breadcrumb { display: none; }
@@ -1896,7 +2237,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
       width: 260px;
       max-width: 82vw;
       height: calc(100vh - 52px);
-      border-right: 1px solid #D7E0E3;
+      border-right: 1px solid var(--nav-border);
       border-bottom: 0;
       transform: translateX(-100%);
       transition: transform 0.2s ease;
@@ -1908,7 +2249,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     }
     .sidebar-header {
       padding: 20px 16px 16px;
-      border-bottom: 1px solid #D7E0E3;
+      border-bottom: 1px solid var(--nav-border);
     }
     .nav-section-title { padding: 12px 16px 6px; }
     .sidebar-link { padding: 7px 16px 7px 24px; }
@@ -1943,6 +2284,24 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
         if (inp) { inp.focus(); inp.select(); }
       }
     });
+    var themeBtn = topbar.querySelector('[data-theme-toggle]');
+    function currentTheme() {
+      return document.documentElement.dataset.theme === 'signal' ? 'signal' : 'classic';
+    }
+    function updateThemeButton() {
+      if (!themeBtn) return;
+      themeBtn.textContent = currentTheme() === 'signal' ? 'Classic' : 'Signal';
+      themeBtn.setAttribute('aria-label', 'Switch to ' + themeBtn.textContent + ' theme');
+    }
+    updateThemeButton();
+    if (themeBtn) {
+      themeBtn.addEventListener('click', function() {
+        var next = currentTheme() === 'signal' ? 'classic' : 'signal';
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem('productTruthTheme', next); } catch (e) {}
+        updateThemeButton();
+      });
+    }
   })();
   </script>
   ${SEARCH_SCRIPT}
@@ -2000,9 +2359,11 @@ for (const spec of allSpecs) {
 
 const specPathToUrl = new Map<string, string>()
 const specPathToTitle = new Map<string, string>()
+const specByPath = new Map<string, SpecMeta>()
 for (const spec of allSpecs) {
   specPathToUrl.set(spec.specPath, spec.url)
   specPathToTitle.set(spec.specPath, spec.title)
+  specByPath.set(spec.specPath, spec)
 }
 
 // Precompute per-spec work/backlog stats from tracking rows. These feed the
@@ -2133,6 +2494,48 @@ function renderSpecDeliveryCell(stats: SpecStats | undefined): string {
   return `<span class="spec-delivery-cell"><span class="spec-delivery-target">${escHtml(targetStr)}</span> <span class="spec-delivery-arrow">→</span> <span class="spec-delivery-delivered">${escHtml(deliveredStr)}</span></span>`
 }
 
+function renderSpecRecordHeader(spec: SpecMeta): string {
+  const row = extractPreviewRow(spec.frontmatter)
+  const stats = specStatsByPath.get(spec.specPath)
+  const backlog = specBacklogStatsByPath.get(spec.specPath)
+  const area = topAreaForSpec(spec)
+  const field = (label: string, value: string) => `<div class="spec-record-field"><div class="spec-record-label">${escHtml(label)}</div><div class="spec-record-value">${value || '<span class="preview-empty">—</span>'}</div></div>`
+  const textField = (label: string, value: string) => field(label, value ? escHtml(value) : '')
+  const workValue = stats ? `${stats.outstanding}/${stats.total} outstanding` : ''
+  const pressureValue = backlog ? `${backlog.openPressure}/${backlog.total} open` : ''
+  const releaseValue = stats ? renderSpecDeliveryCell(stats) : ''
+  const schemaValue = spec.frontmatter.spec_schema || 'missing'
+  const governance = [
+    !spec.frontmatter.maturity && !spec.frontmatter.spec_maturity ? 'Maturity unassessed' : '',
+    !spec.frontmatter.spec_schema ? 'Missing spec_schema' : '',
+    !stats?.total && !backlog?.total ? 'No tracked work/backlog rows' : '',
+    backlog?.blocked ? `${backlog.blocked} blocked backlog row${backlog.blocked === 1 ? '' : 's'}` : '',
+    stats?.blocked ? `${stats.blocked} blocked work row${stats.blocked === 1 ? '' : 's'}` : '',
+  ].filter(Boolean)
+  return `<section class="spec-record">
+    <div class="spec-record-main">
+      <h2>Spec Record</h2>
+      <div class="spec-record-grid">
+        ${field('Maturity', renderSpecMaturityCell(spec))}
+        ${textField('Area', area)}
+        ${textField('Type', row.type || 'unspecified')}
+        ${textField('Schema', schemaValue)}
+        ${textField('Group', row.group)}
+        ${textField('Item', row.item)}
+        ${textField('Known Work', workValue)}
+        ${field('Release', releaseValue)}
+      </div>
+      <div class="spec-record-path">${escHtml(spec.specPath)}</div>
+    </div>
+    <div class="spec-record-side">
+      <h2>Operational Health</h2>
+      <div class="schema-field"><div class="schema-key">Known work</div><div class="schema-desc">${renderSpecStatusCell(stats)}</div></div>
+      <div class="schema-field"><div class="schema-key">Backlog pressure</div><div class="schema-desc">${renderSpecBacklogCell(backlog)}</div></div>
+      <div class="schema-field"><div class="schema-key">Signals</div><div class="schema-desc">${governance.length ? escHtml(governance.join(' · ')) : 'No governance warnings in this record.'}</div></div>
+    </div>
+  </section>`
+}
+
 type MaturityInfo = {
   label: string
   level: string
@@ -2219,6 +2622,216 @@ function sumBacklogPressure(items: InsightSpec[]): number {
   return items.reduce((n, item) => n + (item.backlog?.openPressure || 0), 0)
 }
 
+function attrValue(value: string): string {
+  return value || '—'
+}
+
+function targetsForItem(item: InsightSpec): string[] {
+  return [...(item.work?.targets || new Set<string>())].filter((v) => v && v !== '—' && v !== '-')
+}
+
+function lensAttrs(item: InsightSpec, extraSearch: string[] = []): string {
+  const targets = targetsForItem(item)
+  const searchText = [
+    item.spec.title,
+    item.spec.relPath,
+    item.row.group,
+    item.row.item,
+    item.area,
+    item.maturity.label,
+    ...targets,
+    ...extraSearch,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  return [
+    'data-lens-item',
+    `data-search="${escAttr(searchText)}"`,
+    `data-area="${escAttr(attrValue(item.area))}"`,
+    `data-maturity="${escAttr(attrValue(item.maturity.label))}"`,
+    `data-type="${escAttr(attrValue(item.row.type || 'unspecified'))}"`,
+    `data-target="${escAttr(targets.join('|'))}"`,
+  ].join(' ')
+}
+
+function renderLensControls(items: InsightSpec[]): string {
+  const distinct = (values: string[]) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+  const areas = distinct(items.map((item) => item.area))
+  const maturities = distinct(items.map((item) => item.maturity.label))
+  const types = distinct(items.map((item) => item.row.type || 'unspecified'))
+  const targets = distinct(items.flatMap(targetsForItem))
+  const select = (field: string, label: string, values: string[]) => {
+    if (!values.length) return ''
+    return `<label class="preview-filter-label">${escHtml(label)}<select class="preview-filter lens-filter" data-field="${escAttr(field)}"><option value="">All ${escHtml(label.toLowerCase())}</option>${values.map((v) => `<option value="${escAttr(v)}">${escHtml(v)}</option>`).join('')}</select></label>`
+  }
+  return `<div class="lens-controls">
+    <input type="text" class="lens-search" placeholder="Filter this view…" />
+    ${select('area', 'Area', areas)}
+    ${select('maturity', 'Maturity', maturities)}
+    ${select('type', 'Type', types)}
+    ${select('target', 'Target', targets)}
+    <button type="button" class="preview-reset lens-reset">Reset</button>
+    <span class="lens-count"><strong class="lens-count-visible">${items.length}</strong> visible</span>
+  </div>`
+}
+
+const LENS_FILTER_SCRIPT = `
+<script>
+(function () {
+  document.querySelectorAll('.lens-root').forEach(function(root) {
+    var search = root.querySelector('.lens-search');
+    var filters = root.querySelectorAll('.lens-filter');
+    var reset = root.querySelector('.lens-reset');
+    var count = root.querySelector('.lens-count-visible');
+    var items = root.querySelectorAll('[data-lens-item]');
+    function matchesField(item, field, value) {
+      if (!value) return true;
+      var raw = item.dataset[field] || '';
+      if (field === 'target') return raw.split('|').indexOf(value) !== -1;
+      return raw === value;
+    }
+    function apply() {
+      var q = ((search && search.value) || '').trim().toLowerCase();
+      var active = {};
+      filters.forEach(function(f) { if (f.value) active[f.dataset.field] = f.value; });
+      var visible = 0;
+      items.forEach(function(item) {
+        var textMatch = !q || (item.dataset.search || '').indexOf(q) !== -1;
+        var filterMatch = Object.keys(active).every(function(field) { return matchesField(item, field, active[field]); });
+        var show = textMatch && filterMatch;
+        item.classList.toggle('filtered-out', !show);
+        if (show) visible += 1;
+      });
+      if (count) count.textContent = visible;
+      root.querySelectorAll('.kanban-column').forEach(function(column) {
+        var cards = column.querySelectorAll('[data-lens-item]');
+        var shown = column.querySelectorAll('[data-lens-item]:not(.filtered-out)').length;
+        var badge = column.querySelector('.kanban-count');
+        if (badge) badge.textContent = shown + (shown !== cards.length ? '/' + cards.length : '');
+      });
+    }
+    if (search) search.addEventListener('input', apply);
+    filters.forEach(function(f) { f.addEventListener('change', apply); });
+    if (reset) reset.addEventListener('click', function() {
+      if (search) search.value = '';
+      filters.forEach(function(f) { f.value = ''; });
+      apply();
+    });
+    apply();
+  });
+})();
+</script>`
+
+function governanceSignals(items: InsightSpec[]): Array<{ level: string; title: string; note: string; count: number }> {
+  const unassessed = items.filter((item) => item.maturity.label === 'Unassessed').length
+  const rework = items.filter((item) => item.maturity.label === 'Rework Needed').length
+  const missingSchema = items.filter((item) => !item.spec.frontmatter.spec_schema).length
+  const noRows = items.filter((item) => !item.work?.total && !item.backlog?.total).length
+  const noMaturityButWork = items.filter((item) => item.maturity.label === 'Unassessed' && ((item.work?.total || 0) > 0 || (item.backlog?.total || 0) > 0)).length
+  return [
+    { level: 'R', title: 'Rework needed', note: 'Specs explicitly marked stale, wrong, or materially incomplete.', count: rework },
+    { level: '0', title: 'Unassessed maturity', note: 'Specs not reviewed under the current maturity model.', count: unassessed },
+    { level: 'S', title: 'Missing schema version', note: 'Specs without an explicit spec_schema frontmatter value.', count: missingSchema },
+    { level: 'W', title: 'No tracked rows', note: 'Specs with no known work rows or backlog pressure rows.', count: noRows },
+    { level: 'A', title: 'Active truth gap', note: 'Unassessed specs that already have work or backlog rows.', count: noMaturityButWork },
+  ]
+}
+
+function renderGovernancePanel(items: InsightSpec[]): string {
+  const rows = governanceSignals(items)
+    .map((signal) => `<div class="governance-row">
+      <div class="governance-level">${escHtml(signal.level)}</div>
+      <div>
+        <div class="governance-title">${escHtml(signal.title)}</div>
+        <div class="governance-note">${escHtml(signal.note)}</div>
+      </div>
+      <span class="metric-pill${signal.count ? ' warn' : ' good'}">${signal.count}</span>
+    </div>`)
+    .join('')
+  return `<div class="governance-list">${rows}</div>`
+}
+
+function riskScore(item: InsightSpec): number {
+  let score = 0
+  if (item.maturity.label === 'Rework Needed') score += 20
+  if (item.maturity.label === 'Unassessed') score += 8
+  score += (item.backlog?.openPressure || 0) * 2
+  score += item.work?.blocked ? item.work.blocked * 4 : 0
+  score += item.backlog?.blocked ? item.backlog.blocked * 4 : 0
+  score += item.work?.outstanding || 0
+  if (!item.spec.frontmatter.spec_schema) score += 2
+  return score
+}
+
+function renderRiskList(items: InsightSpec[], limit = 8): string {
+  const risky = [...items]
+    .map((item) => ({ item, score: riskScore(item) }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score || a.item.spec.title.localeCompare(b.item.spec.title))
+    .slice(0, limit)
+  if (!risky.length) return '<p class="dashboard-note">No risk signals in this scope.</p>'
+  return `<div class="risk-list">${risky.map(({ item, score }) => `<div class="risk-item">
+    <span class="risk-score">${score}</span>
+    <div class="risk-title">
+      <a href="${escHtml(item.spec.url)}">${escHtml(item.spec.title)}</a>
+      <div class="risk-meta">${escHtml(item.area)} · ${escHtml(item.maturity.label)} · ${item.backlog?.openPressure || 0} pressure · ${item.work?.outstanding || 0} work</div>
+    </div>
+    ${renderSpecMaturityCell(item.spec)}
+  </div>`).join('')}</div>`
+}
+
+function renderSignalTiles(items: InsightSpec[]): string {
+  const mature = items.filter((item) => maturityIndex(item.maturity.label) >= maturityIndex('Buildable') && item.maturity.label !== 'Rework Needed').length
+  const active = items.reduce((n, item) => n + (item.work?.active || 0) + (item.backlog?.active || 0), 0)
+  const blocked = items.reduce((n, item) => n + (item.work?.blocked || 0) + (item.backlog?.blocked || 0), 0)
+  const pressure = sumBacklogPressure(items)
+  const outstanding = sumOutstanding(items)
+  const schemaMissing = items.filter((item) => !item.spec.frontmatter.spec_schema).length
+  const tiles = [
+    ['Buildable+', `${mature}/${items.length}`, 'Specs at Buildable or above'],
+    ['Active Rows', String(active), 'Work/backlog currently moving'],
+    ['Blocked Rows', String(blocked), 'Rows unable to progress'],
+    ['Known Work', String(outstanding), 'Outstanding work rows'],
+    ['Pressure', String(pressure), 'Unresolved backlog pressure'],
+    ['Schema Gaps', String(schemaMissing), 'Specs missing schema version'],
+  ]
+  return `<div class="signal-grid">${tiles.map(([label, value, note]) => `<div class="signal-tile">
+    <div class="signal-label">${escHtml(label)}</div>
+    <div class="signal-value">${escHtml(value)}</div>
+    <div class="insight-note">${escHtml(note)}</div>
+  </div>`).join('')}</div>`
+}
+
+function renderDashboardConsole(items: InsightSpec[], baseHref = ''): string {
+  return `<section class="panel">
+    <h2>Product Truth Console</h2>
+    ${renderInsightCards(items, baseHref)}
+    <div class="dashboard-grid">
+      <div class="dashboard-stack">
+        <div class="dashboard-panel">
+          <h3>Operating Signals</h3>
+          ${renderSignalTiles(items)}
+        </div>
+        <div class="dashboard-panel">
+          <h3>Maturity Distribution</h3>
+          ${renderMaturityStrip(items)}
+        </div>
+      </div>
+      <div class="dashboard-stack">
+        <div class="dashboard-panel">
+          <h3>Highest Risk Specs</h3>
+          ${renderRiskList(items, 8)}
+        </div>
+        <div class="dashboard-panel">
+          <h3>Governance</h3>
+          ${renderGovernancePanel(items)}
+        </div>
+      </div>
+    </div>
+  </section>`
+}
+
 function renderInsightCards(items: InsightSpec[], baseHref = ''): string {
   const unassessed = items.filter((i) => i.maturity.label === 'Unassessed').length
   const rework = items.filter((i) => i.maturity.label === 'Rework Needed').length
@@ -2302,9 +2915,11 @@ type ActivityCard = {
   title: string
   specTitle: string
   specUrl: string
+  area: string
+  maturity: string
+  type: string
   status: string
   key: string
-  type: string
   target: string
 }
 
@@ -2342,30 +2957,38 @@ function buildActivityCards(section: Section): ActivityCard[] {
   for (const row of subfeatures) {
     const specUrl = specPathToUrl.get(row.Spec)
     if (!specUrl) continue
+    const spec = specByPath.get(row.Spec)
+    const preview = spec ? extractPreviewRow(spec.frontmatter) : null
     cards.push({
       bucket: workBucket(String(row.Status || '')),
       kind: 'work',
       title: row.Subfeature || row.Item || row.Key || 'Work row',
       specTitle: specPathToTitle.get(row.Spec) || row.Spec,
       specUrl,
+      area: spec ? topAreaForSpec(spec) : '',
+      maturity: spec ? maturityForSpec(spec).label : '',
+      type: row.Surface || preview?.type || 'work',
       status: row.Status || '',
       key: row.Key || '',
-      type: row.Surface || 'work',
       target: row.Target || '',
     })
   }
   for (const row of backlog) {
     const specUrl = specPathToUrl.get(row.Spec)
     if (!specUrl) continue
+    const spec = specByPath.get(row.Spec)
+    const preview = spec ? extractPreviewRow(spec.frontmatter) : null
     cards.push({
       bucket: backlogBucket(String(row.Status || '')),
       kind: 'backlog',
       title: row.Item || row.Subfeature || row.Key || 'Backlog row',
       specTitle: specPathToTitle.get(row.Spec) || row.Spec,
       specUrl,
+      area: spec ? topAreaForSpec(spec) : '',
+      maturity: spec ? maturityForSpec(spec).label : '',
+      type: row.Type || preview?.type || 'backlog',
       status: row.Status || '',
       key: row.Key || '',
-      type: row.Type || 'backlog',
       target: '',
     })
   }
@@ -2382,7 +3005,9 @@ function renderActivityBoard(cards: ActivityCard[], limitPerColumn = 14): string
     return `<section class="kanban-column">
       <div class="kanban-heading"><h3>${escHtml(col.label)}</h3><span class="kanban-count">${columnCards.length}</span></div>
       <div class="kanban-cards">
-        ${visible.map((card) => `<article class="kanban-card">
+        ${visible.map((card) => {
+          const searchText = [card.title, card.specTitle, card.area, card.maturity, card.kind, card.type, card.status, card.target].filter(Boolean).join(' ').toLowerCase()
+          return `<article class="kanban-card" data-lens-item data-search="${escAttr(searchText)}" data-area="${escAttr(attrValue(card.area))}" data-maturity="${escAttr(attrValue(card.maturity))}" data-type="${escAttr(attrValue(card.type))}" data-target="${escAttr(card.target && card.target !== '—' ? card.target : '')}">
           <a href="${escHtml(card.specUrl)}">${escHtml(card.title)}</a>
           <div class="kanban-meta">
             ${card.key ? `<span class="kanban-chip">${escHtml(card.key)}</span>` : ''}
@@ -2392,11 +3017,33 @@ function renderActivityBoard(cards: ActivityCard[], limitPerColumn = 14): string
             ${card.target && card.target !== '—' ? `<span class="kanban-chip">${escHtml(card.target)}</span>` : ''}
           </div>
           <div class="work-path" title="${escAttr(card.specTitle)}">${escHtml(card.specTitle)}</div>
-        </article>`).join('') || '<p class="lens-muted">No rows.</p>'}
+        </article>`
+        }).join('') || '<p class="lens-muted">No rows.</p>'}
         ${columnCards.length > visible.length ? `<div class="kanban-more">+${columnCards.length - visible.length} more rows</div>` : ''}
       </div>
     </section>`
   }).join('')}</div>`
+}
+
+function renderActivityControls(cards: ActivityCard[]): string {
+  const distinct = (values: string[]) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+  const areas = distinct(cards.map((card) => card.area))
+  const maturities = distinct(cards.map((card) => card.maturity))
+  const types = distinct(cards.map((card) => card.type))
+  const targets = distinct(cards.map((card) => card.target).filter((v) => v && v !== '—' && v !== '-'))
+  const select = (field: string, label: string, values: string[]) => {
+    if (!values.length) return ''
+    return `<label class="preview-filter-label">${escHtml(label)}<select class="preview-filter lens-filter" data-field="${escAttr(field)}"><option value="">All ${escHtml(label.toLowerCase())}</option>${values.map((v) => `<option value="${escAttr(v)}">${escHtml(v)}</option>`).join('')}</select></label>`
+  }
+  return `<div class="lens-controls">
+    <input type="text" class="lens-search" placeholder="Filter board…" />
+    ${select('area', 'Area', areas)}
+    ${select('maturity', 'Maturity', maturities)}
+    ${select('type', 'Type', types)}
+    ${select('target', 'Target', targets)}
+    <button type="button" class="preview-reset lens-reset">Reset</button>
+    <span class="lens-count"><strong class="lens-count-visible">${cards.length}</strong> visible</span>
+  </div>`
 }
 
 function renderWorkRows(items: InsightSpec[], mode: 'work' | 'pressure', limit = 24): string {
@@ -2415,7 +3062,7 @@ function renderWorkRows(items: InsightSpec[], mode: 'work' | 'pressure', limit =
     const landed = item.work?.landed || 0
     const pressure = item.backlog?.openPressure || 0
     const resolved = item.backlog?.resolved || 0
-    return `<div class="work-row">
+    return `<div class="work-row" ${lensAttrs(item)}>
       <div class="work-title">
         <a href="${escHtml(item.spec.url)}">${escHtml(item.spec.title)}</a>
         <div class="work-path">${escHtml(item.folder || item.spec.relPath)}</div>
@@ -2439,7 +3086,7 @@ function renderMaturityRows(items: InsightSpec[], limit = 24): string {
     })
     .slice(0, limit)
   if (!sorted.length) return '<p class="lens-muted">No specs found.</p>'
-  return `<div class="work-list">${sorted.map((item) => `<div class="work-row">
+  return `<div class="work-list">${sorted.map((item) => `<div class="work-row" ${lensAttrs(item)}>
       <div class="work-title">
         <a href="${escHtml(item.spec.url)}">${escHtml(item.spec.title)}</a>
         <div class="work-path">${escHtml(item.folder || item.spec.relPath)}</div>
@@ -2869,10 +3516,12 @@ for (const section of sections) {
       <h2>Maturity by area</h2>
       ${renderAreaMatrix(items)}
     </section>
-    <section class="panel">
+    <section class="panel lens-root">
       <h2>Lowest maturity specs</h2>
+      ${renderLensControls(items)}
       ${renderMaturityRows(items, 18)}
-    </section>`
+    </section>
+    ${LENS_FILTER_SCRIPT}`
   const maturityPath = routeFor(section.slug, 'maturity')
   writeFileSync(join(OUTPUT_DIR, maturityPath), pageShell(`${headingPrefix}Maturity Map`, sections, section.slug, 'maturity', maturityBody, maturityPath))
 
@@ -2884,10 +3533,12 @@ for (const section of sections) {
       <p class="subhead">A kanban-style view of current work and backlog activity. It shows state, not permanent completeness.</p>
       ${renderInsightCards(items)}
     </section>
-    <section class="panel">
+    <section class="panel lens-root">
       <h2>Activity board</h2>
+      ${renderActivityControls(activityCards)}
       ${renderActivityBoard(activityCards)}
-    </section>`
+    </section>
+    ${LENS_FILTER_SCRIPT}`
   const activityPath = routeFor(section.slug, 'activity')
   writeFileSync(join(OUTPUT_DIR, activityPath), pageShell(`${headingPrefix}Activity Board`, sections, section.slug, 'activity', activityBody, activityPath))
 
@@ -2899,10 +3550,12 @@ for (const section of sections) {
       <p class="subhead">Known implementation/design work remaining in the corpus. Counts come from work rows, not estimated percent complete.</p>
       ${renderInsightCards(items)}
     </section>
-    <section class="panel">
+    <section class="panel lens-root">
       <h2>Most outstanding work</h2>
+      ${renderLensControls(items)}
       ${renderWorkRows(items, 'work', 40)}
-    </section>`
+    </section>
+    ${LENS_FILTER_SCRIPT}`
   const workPath = routeFor(section.slug, 'work')
   writeFileSync(join(OUTPUT_DIR, workPath), pageShell(`${headingPrefix}Known Work`, sections, section.slug, 'work', workBody, workPath))
 
@@ -2914,10 +3567,12 @@ for (const section of sections) {
       <p class="subhead">Unresolved decisions, dependencies, candidate enhancements, and other tracked pressure that has not necessarily become committed work.</p>
       ${renderInsightCards(items)}
     </section>
-    <section class="panel">
+    <section class="panel lens-root">
       <h2>Highest pressure specs</h2>
+      ${renderLensControls(items)}
       ${renderWorkRows(items, 'pressure', 40)}
-    </section>`
+    </section>
+    ${LENS_FILTER_SCRIPT}`
   const pressurePath = routeFor(section.slug, 'pressure')
   writeFileSync(join(OUTPUT_DIR, pressurePath), pageShell(`${headingPrefix}Backlog Pressure`, sections, section.slug, 'pressure', pressureBody, pressurePath))
 
@@ -2931,7 +3586,7 @@ for (const section of sections) {
     </section>
     <section class="panel">
       <h2>Release rows</h2>
-      <div class="lens-grid">
+      <div class="lens-grid release-grid">
         <div class="lens-stack">
           <h3>Targets</h3>
           ${renderReleaseTable(items, 'targets')}
@@ -2942,10 +3597,12 @@ for (const section of sections) {
         </div>
       </div>
     </section>
-    <section class="panel">
+    <section class="panel lens-root">
       <h2>Specs with outstanding work</h2>
+      ${renderLensControls(items)}
       ${renderWorkRows(items, 'work', 24)}
-    </section>`
+    </section>
+    ${LENS_FILTER_SCRIPT}`
   const releasePath = routeFor(section.slug, 'releases')
   writeFileSync(join(OUTPUT_DIR, releasePath), pageShell(`${headingPrefix}Release Lens`, sections, section.slug, 'releases', releaseBody, releasePath))
 
@@ -2956,6 +3613,10 @@ for (const section of sections) {
       <h1>${escHtml(`${headingPrefix}Schema`)}</h1>
       <p class="subhead">The current human and agent-facing schema of the corpus: fields, vocabulary, and derived views.</p>
       ${renderInsightCards(items)}
+    </section>
+    <section class="panel">
+      <h2>Governance signals</h2>
+      ${renderGovernancePanel(items)}
     </section>
     <section class="panel">
       <h2>Relevant fields</h2>
@@ -3032,6 +3693,7 @@ for (const spec of allSpecs) {
       <h1>${escHtml(rendered.title)}</h1>
       <div class="meta">${escHtml(spec.specPath)}</div>
     </section>
+    ${renderSpecRecordHeader(spec)}
     ${frontmatterPanel}
     <section class="panel content">${rendered.html}</section>
   `
@@ -3649,18 +4311,10 @@ function buildRootBreakdown(): string {
 
 const rootBreakdown = buildRootBreakdown()
 
-const overallDelivery = snapshot.progress.delivery.all
-const overallBacklog = snapshot.progress.backlog.all
 const rootInsightItems = buildInsightSpecs(allSpecs)
 const rootInsightBaseHref = SINGLE_SOURCE_MODE ? '' : 'portfolio/'
 
-const overallProgressPanel = `
-  <section class="panel">
-    <h2>Corpus Signals</h2>
-    ${renderInsightCards(rootInsightItems, rootInsightBaseHref)}
-    <div class="progress-group"><h3>Known work <span class="progress-group-note">Subfeatures/work rows across all sources — see each spec page for detail</span></h3>${renderProgress(overallDelivery)}</div>
-    <div class="progress-group"><h3>Backlog pressure <span class="progress-group-note">Open questions and tracked pressure across all sources — see each spec page for detail</span></h3>${renderProgress(overallBacklog)}</div>
-  </section>`
+const overallProgressPanel = renderDashboardConsole(rootInsightItems, rootInsightBaseHref)
 
 const rootSourceRows = snapshot.sources
   .map(
