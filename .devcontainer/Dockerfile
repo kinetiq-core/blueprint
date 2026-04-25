@@ -1,5 +1,8 @@
 FROM mcr.microsoft.com/devcontainers/typescript-node:22
 
+# Claude Code CLI + Codex CLI. Both CLIs' runtime state lives in shared
+# Docker volumes (kinetiq-claude-home, kinetiq-codex-home) mounted at
+# /home/node/.claude and /home/node/.codex respectively.
 RUN npm install -g \
     @anthropic-ai/claude-code \
     @openai/codex
@@ -15,11 +18,13 @@ RUN git config --system --add safe.directory '*'
 # behaviour so status is consistent across host and container.
 RUN git config --system core.autocrlf true
 
-# Pre-create node_modules path with `node` ownership. When compose first
-# attaches the empty named volume for node_modules, Docker copies this
-# directory's ownership into the volume. Without this, the mount point is
-# created as root:root and `npm install` fails with EACCES.
+# Pre-create named-volume mount paths with `node` ownership. When compose
+# first attaches an empty Docker volume, it copies the image directory's
+# ownership into the volume. Without this, the mount point is created as
+# root:root and writes (npm install, claude/codex sessions) fail with EACCES.
 RUN mkdir -p /workspaces/kinetiq-core/blueprint/node_modules \
- && chown -R node:node /workspaces
+    /home/node/.codex \
+    /home/node/.claude \
+ && chown -R node:node /workspaces /home/node/.codex /home/node/.claude
 
 USER node

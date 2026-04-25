@@ -14,8 +14,10 @@
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
   "mounts": [
-    "source=${localEnv:USERPROFILE}${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind,consistency=cached",
-    "source=${localEnv:USERPROFILE}${localEnv:HOME}/.codex,target=/home/node/.codex,type=bind,consistency=cached",
+    // ~/.claude and ~/.codex are NOT bind-mounted from host. Both CLIs use
+    // shared Docker volumes (kinetiq-claude-home, kinetiq-codex-home) declared
+    // in docker-compose.yml so container-side state stays separate from the
+    // host's installs and avoids Windows↔Linux filesystem incompatibilities.
     "source=${localEnv:USERPROFILE}${localEnv:HOME}/.gitconfig,target=/home/node/.gitconfig,type=bind,consistency=cached",
     "source=${localEnv:USERPROFILE}${localEnv:HOME}/.ssh,target=/home/node/.ssh,type=bind,readonly",
     "source=${localEnv:APPDATA}/GitHub CLI,target=/home/node/.config/gh,type=bind,consistency=cached"
