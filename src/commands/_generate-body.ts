@@ -770,8 +770,9 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     border-left-color: var(--accent);
   }
   .main {
-    width: calc(100% - 260px);
+    width: calc(100% - 620px);
     margin-left: 260px;
+    margin-right: 360px;
     padding: calc(var(--topbar-height) + 22px) 0 64px;
   }
   .shell {
@@ -779,6 +780,103 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     max-width: 1480px;
     margin: 0 auto;
     padding: 0 28px;
+  }
+  .inspector {
+    position: fixed;
+    top: var(--topbar-height);
+    right: 0;
+    bottom: 0;
+    width: 360px;
+    z-index: 12;
+    border-left: 1px solid var(--line);
+    background: var(--panel-bg);
+    box-shadow: var(--shadow-panel);
+    overflow-y: auto;
+  }
+  .inspector-inner { padding: 18px 16px 24px; }
+  .inspector-kicker {
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .inspector-title {
+    margin-top: 8px;
+    font-size: 18px;
+    line-height: 1.25;
+    font-weight: 800;
+    color: var(--ink);
+  }
+  .inspector-summary {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+  .inspector-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .inspector-actions a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--ink);
+    background: var(--content-card-bg);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 750;
+  }
+  .inspector-actions a:hover { border-color: var(--primary); color: var(--primary); }
+  .inspector-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .inspector-field {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 9px;
+    background: var(--content-card-bg);
+  }
+  .inspector-field.wide { grid-column: 1 / -1; }
+  .inspector-label {
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .inspector-value {
+    margin-top: 5px;
+    font-size: 12px;
+    line-height: 1.35;
+    font-weight: 700;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+  [data-inspector-title] { cursor: default; }
+  [data-inspector-title]:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  [data-inspector-title].inspector-selected {
+    outline: 2px solid color-mix(in srgb, var(--primary) 45%, transparent);
+    outline-offset: 2px;
+  }
+  body.inspector-disabled .inspector { display: none; }
+  body.inspector-disabled .main {
+    width: calc(100% - 260px);
+    margin-right: 0;
   }
   .hero, .panel {
     background: var(--panel-bg);
@@ -860,6 +958,62 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     padding: 16px;
   }
   .insight-card:hover { border-color: var(--secondary); background: var(--panel-subtle); }
+  .console-layout {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 16px;
+    margin-top: 18px;
+  }
+  .console-main { min-width: 0; }
+  .scope-rail {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--content-card-bg);
+    padding: 10px;
+    align-self: start;
+  }
+  .scope-rail-title {
+    padding: 4px 6px 9px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .scope-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    padding: 7px 6px;
+    border-radius: 6px;
+  }
+  .scope-row:hover { background: var(--content-card-hover-bg); }
+  .scope-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 750;
+  }
+  .scope-count {
+    min-width: 24px;
+    padding: 1px 6px;
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--primary) 12%, transparent);
+    color: var(--primary);
+    text-align: center;
+    font-size: 11px;
+    font-weight: 850;
+  }
+  .scope-meta {
+    grid-column: 1 / -1;
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.25;
+  }
   .dashboard-grid {
     display: grid;
     grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
@@ -903,6 +1057,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     border-bottom: 1px solid var(--line);
   }
   .risk-item:last-child { border-bottom: 0; }
+  .risk-item:hover { background: var(--content-card-hover-bg); }
   .risk-score {
     display: inline-flex;
     align-items: center;
@@ -1336,6 +1491,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     border-bottom: 1px solid var(--line);
   }
   .work-row:last-child { border-bottom: 0; }
+  .work-row:hover { background: var(--content-card-hover-bg); }
   .work-title a { color: var(--ink); text-decoration: none; font-weight: 700; }
   .work-title a:hover { color: var(--secondary); }
   .work-path { margin-top: 3px; color: var(--muted); font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
@@ -1355,7 +1511,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   .metric-pill.good { background: rgba(47, 124, 122, 0.12); color: var(--secondary); }
   @media (max-width: 1180px) {
     .insight-grid { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
-    .dashboard-grid, .spec-record { grid-template-columns: 1fr; }
+    .dashboard-grid, .spec-record, .console-layout { grid-template-columns: 1fr; }
     .lens-grid { grid-template-columns: 1fr; }
     .kanban-board { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
   }
@@ -2159,6 +2315,13 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     line-height: 1.55;
     color: var(--muted);
   }
+  @media (max-width: 1280px) {
+    .inspector { display: none; }
+    .main {
+      width: calc(100% - 260px);
+      margin-right: 0;
+    }
+  }
   @media (max-width: 1000px) {
     .topbar {
       flex-wrap: nowrap;
@@ -2203,6 +2366,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     .main {
       width: 100%;
       margin-left: 0;
+      margin-right: 0;
     }
   }
   @media (max-width: 700px) {
@@ -2272,6 +2436,23 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     <main class="main">
       <div class="shell">${body}${LEGAL_NOTICE_HTML}</div>
     </main>
+    <aside class="inspector" data-inspector-panel aria-label="Spec inspector">
+      <div class="inspector-inner">
+        <div class="inspector-kicker" data-inspector-context>Selection</div>
+        <div class="inspector-title" data-inspector-title-out>Spec Inspector</div>
+        <div class="inspector-summary" data-inspector-summary>Select a spec, work row, or activity card to inspect maturity, work, pressure, release intent, and source context without leaving the current view.</div>
+        <div class="inspector-actions">
+          <a href="#" data-inspector-open hidden>Open Spec</a>
+        </div>
+        <div class="inspector-grid" data-inspector-grid>
+          <div class="inspector-field"><div class="inspector-label">Area</div><div class="inspector-value">—</div></div>
+          <div class="inspector-field"><div class="inspector-label">Maturity</div><div class="inspector-value">—</div></div>
+          <div class="inspector-field"><div class="inspector-label">Known Work</div><div class="inspector-value">—</div></div>
+          <div class="inspector-field"><div class="inspector-label">Pressure</div><div class="inspector-value">—</div></div>
+          <div class="inspector-field wide"><div class="inspector-label">Source</div><div class="inspector-value">—</div></div>
+        </div>
+      </div>
+    </aside>
   </div>
   <script>
   (function() {
@@ -2301,6 +2482,76 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
         try { localStorage.setItem('productTruthTheme', next); } catch (e) {}
         updateThemeButton();
       });
+    }
+    var inspector = document.querySelector('[data-inspector-panel]');
+    var selectedInspectorItem = null;
+    function field(label, value, wide) {
+      var node = document.createElement('div');
+      node.className = 'inspector-field' + (wide ? ' wide' : '');
+      var labelNode = document.createElement('div');
+      labelNode.className = 'inspector-label';
+      labelNode.textContent = label;
+      var valueNode = document.createElement('div');
+      valueNode.className = 'inspector-value';
+      valueNode.textContent = value || '—';
+      node.appendChild(labelNode);
+      node.appendChild(valueNode);
+      return node;
+    }
+    function selectInspectorItem(item) {
+      if (!inspector || !item) return;
+      if (selectedInspectorItem) selectedInspectorItem.classList.remove('inspector-selected');
+      selectedInspectorItem = item;
+      selectedInspectorItem.classList.add('inspector-selected');
+      var title = inspector.querySelector('[data-inspector-title-out]');
+      var context = inspector.querySelector('[data-inspector-context]');
+      var summary = inspector.querySelector('[data-inspector-summary]');
+      var open = inspector.querySelector('[data-inspector-open]');
+      var grid = inspector.querySelector('[data-inspector-grid]');
+      if (title) title.textContent = item.dataset.inspectorTitle || 'Selected item';
+      if (context) context.textContent = item.dataset.inspectorContext || 'Spec';
+      if (summary) summary.textContent = item.dataset.inspectorPath || '';
+      if (open) {
+        var href = item.dataset.inspectorHref || '';
+        open.hidden = !href;
+        if (href) open.setAttribute('href', href);
+      }
+      if (grid) {
+        grid.replaceChildren(
+          field('Area', item.dataset.inspectorArea),
+          field('Maturity', item.dataset.inspectorMaturity),
+          field('Type', item.dataset.inspectorType),
+          field('State', item.dataset.inspectorState),
+          field('Known Work', item.dataset.inspectorWork),
+          field('Pressure', item.dataset.inspectorPressure),
+          field('Target', item.dataset.inspectorTarget, true),
+          field('Delivered', item.dataset.inspectorDelivered, true)
+        );
+      }
+    }
+    document.addEventListener('click', function(e) {
+      var target = e.target;
+      if (!(target instanceof Element)) return;
+      var item = target.closest('[data-inspector-title]');
+      if (!item) return;
+      if (target.closest('button, input, select, textarea')) return;
+      e.preventDefault();
+      selectInspectorItem(item);
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var target = e.target;
+      if (!(target instanceof Element)) return;
+      var item = target.closest('[data-inspector-title]');
+      if (!item || target.closest('button, input, select, textarea')) return;
+      e.preventDefault();
+      selectInspectorItem(item);
+    });
+    var firstInspectorItem = document.querySelector('[data-inspector-title]');
+    if (firstInspectorItem) {
+      selectInspectorItem(firstInspectorItem);
+    } else {
+      document.body.classList.add('inspector-disabled');
     }
   })();
   </script>
@@ -2630,6 +2881,25 @@ function targetsForItem(item: InsightSpec): string[] {
   return [...(item.work?.targets || new Set<string>())].filter((v) => v && v !== '—' && v !== '-')
 }
 
+function inspectorAttrs(item: InsightSpec, context = 'Spec'): string {
+  const targets = targetsForItem(item)
+  const delivered = [...(item.work?.delivered || new Set<string>())].filter((v) => v && v !== '—' && v !== '-')
+  return [
+    'tabindex="0"',
+    `data-inspector-title="${escAttr(item.spec.title)}"`,
+    `data-inspector-context="${escAttr(context)}"`,
+    `data-inspector-href="${escAttr(item.spec.url)}"`,
+    `data-inspector-area="${escAttr(item.area)}"`,
+    `data-inspector-maturity="${escAttr(item.maturity.label)}"`,
+    `data-inspector-type="${escAttr(item.row.type || 'unspecified')}"`,
+    `data-inspector-target="${escAttr(targets.join(', ') || '—')}"`,
+    `data-inspector-delivered="${escAttr(delivered.join(', ') || '—')}"`,
+    `data-inspector-work="${escAttr(String(item.work?.outstanding || 0))}"`,
+    `data-inspector-pressure="${escAttr(String(item.backlog?.openPressure || 0))}"`,
+    `data-inspector-path="${escAttr(item.spec.relPath)}"`,
+  ].join(' ')
+}
+
 function lensAttrs(item: InsightSpec, extraSearch: string[] = []): string {
   const targets = targetsForItem(item)
   const searchText = [
@@ -2652,6 +2922,7 @@ function lensAttrs(item: InsightSpec, extraSearch: string[] = []): string {
     `data-maturity="${escAttr(attrValue(item.maturity.label))}"`,
     `data-type="${escAttr(attrValue(item.row.type || 'unspecified'))}"`,
     `data-target="${escAttr(targets.join('|'))}"`,
+    inspectorAttrs(item),
   ].join(' ')
 }
 
@@ -2771,7 +3042,7 @@ function renderRiskList(items: InsightSpec[], limit = 8): string {
     .sort((a, b) => b.score - a.score || a.item.spec.title.localeCompare(b.item.spec.title))
     .slice(0, limit)
   if (!risky.length) return '<p class="dashboard-note">No risk signals in this scope.</p>'
-  return `<div class="risk-list">${risky.map(({ item, score }) => `<div class="risk-item">
+  return `<div class="risk-list">${risky.map(({ item, score }) => `<div class="risk-item" ${lensAttrs(item, ['risk'])}>
     <span class="risk-score">${score}</span>
     <div class="risk-title">
       <a href="${escHtml(item.spec.url)}">${escHtml(item.spec.title)}</a>
@@ -2803,29 +3074,60 @@ function renderSignalTiles(items: InsightSpec[]): string {
   </div>`).join('')}</div>`
 }
 
+function renderScopeRail(items: InsightSpec[]): string {
+  const byArea = new Map<string, InsightSpec[]>()
+  for (const item of items) {
+    const list = byArea.get(item.area) || []
+    list.push(item)
+    byArea.set(item.area, list)
+  }
+  const rows = [...byArea.entries()]
+    .sort(([, a], [, b]) => b.length - a.length || a[0]?.area.localeCompare(b[0]?.area || '') || 0)
+    .slice(0, 14)
+    .map(([area, areaItems]) => {
+      const work = sumOutstanding(areaItems)
+      const pressure = sumBacklogPressure(areaItems)
+      return `<div class="scope-row" title="${escAttr(area)}">
+        <div class="scope-name">${escHtml(area)}</div>
+        <div class="scope-count">${areaItems.length}</div>
+        <div class="scope-meta">${work} work · ${pressure} pressure</div>
+      </div>`
+    })
+    .join('')
+  return `<aside class="scope-rail">
+    <div class="scope-rail-title">Areas</div>
+    ${rows || '<p class="dashboard-note">No areas recorded.</p>'}
+  </aside>`
+}
+
 function renderDashboardConsole(items: InsightSpec[], baseHref = ''): string {
   return `<section class="panel">
     <h2>Product Truth Console</h2>
-    ${renderInsightCards(items, baseHref)}
-    <div class="dashboard-grid">
-      <div class="dashboard-stack">
-        <div class="dashboard-panel">
-          <h3>Operating Signals</h3>
-          ${renderSignalTiles(items)}
-        </div>
-        <div class="dashboard-panel">
-          <h3>Maturity Distribution</h3>
-          ${renderMaturityStrip(items)}
-        </div>
-      </div>
-      <div class="dashboard-stack">
-        <div class="dashboard-panel">
-          <h3>Highest Risk Specs</h3>
-          ${renderRiskList(items, 8)}
-        </div>
-        <div class="dashboard-panel">
-          <h3>Governance</h3>
-          ${renderGovernancePanel(items)}
+    <div class="console-layout">
+      ${renderScopeRail(items)}
+      <div class="console-main">
+        ${renderInsightCards(items, baseHref)}
+        <div class="dashboard-grid">
+          <div class="dashboard-stack">
+            <div class="dashboard-panel">
+              <h3>Operating Signals</h3>
+              ${renderSignalTiles(items)}
+            </div>
+            <div class="dashboard-panel">
+              <h3>Maturity Distribution</h3>
+              ${renderMaturityStrip(items)}
+            </div>
+          </div>
+          <div class="dashboard-stack">
+            <div class="dashboard-panel">
+              <h3>Highest Risk Specs</h3>
+              ${renderRiskList(items, 8)}
+            </div>
+            <div class="dashboard-panel">
+              <h3>Governance</h3>
+              ${renderGovernancePanel(items)}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2995,6 +3297,24 @@ function buildActivityCards(section: Section): ActivityCard[] {
   return cards
 }
 
+function activityInspectorAttrs(card: ActivityCard): string {
+  return [
+    'tabindex="0"',
+    `data-inspector-title="${escAttr(card.title)}"`,
+    `data-inspector-context="${escAttr(`${card.kind} row`)}"`,
+    `data-inspector-href="${escAttr(card.specUrl)}"`,
+    `data-inspector-area="${escAttr(card.area || '—')}"`,
+    `data-inspector-maturity="${escAttr(card.maturity || '—')}"`,
+    `data-inspector-type="${escAttr(card.type || '—')}"`,
+    `data-inspector-state="${escAttr(card.status || card.bucket)}"`,
+    `data-inspector-target="${escAttr(card.target || '—')}"`,
+    `data-inspector-delivered="—"`,
+    `data-inspector-work="${escAttr(card.kind === 'work' ? '1' : '0')}"`,
+    `data-inspector-pressure="${escAttr(card.kind === 'backlog' ? '1' : '0')}"`,
+    `data-inspector-path="${escAttr(card.specTitle)}"`,
+  ].join(' ')
+}
+
 function renderActivityBoard(cards: ActivityCard[], limitPerColumn = 14): string {
   if (!cards.length) return '<p class="lens-muted">No activity rows found.</p>'
   return `<div class="kanban-board">${ACTIVITY_COLUMNS.map((col) => {
@@ -3007,7 +3327,7 @@ function renderActivityBoard(cards: ActivityCard[], limitPerColumn = 14): string
       <div class="kanban-cards">
         ${visible.map((card) => {
           const searchText = [card.title, card.specTitle, card.area, card.maturity, card.kind, card.type, card.status, card.target].filter(Boolean).join(' ').toLowerCase()
-          return `<article class="kanban-card" data-lens-item data-search="${escAttr(searchText)}" data-area="${escAttr(attrValue(card.area))}" data-maturity="${escAttr(attrValue(card.maturity))}" data-type="${escAttr(attrValue(card.type))}" data-target="${escAttr(card.target && card.target !== '—' ? card.target : '')}">
+          return `<article class="kanban-card" data-lens-item data-search="${escAttr(searchText)}" data-area="${escAttr(attrValue(card.area))}" data-maturity="${escAttr(attrValue(card.maturity))}" data-type="${escAttr(attrValue(card.type))}" data-target="${escAttr(card.target && card.target !== '—' ? card.target : '')}" ${activityInspectorAttrs(card)}>
           <a href="${escHtml(card.specUrl)}">${escHtml(card.title)}</a>
           <div class="kanban-meta">
             ${card.key ? `<span class="kanban-chip">${escHtml(card.key)}</span>` : ''}
