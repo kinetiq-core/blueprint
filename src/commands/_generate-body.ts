@@ -44,7 +44,8 @@ type Snapshot = {
 
 type TableKey = 'mobile_features' | 'web_features' | 'backend' | 'release' | 'ops' | 'features_future' | 'subfeatures' | 'backlog'
 
-type SectionPageKey = 'index' | 'browse' | 'table' | TableKey
+type InsightPageKey = 'maturity' | 'activity' | 'work' | 'pressure' | 'releases' | 'schema'
+type SectionPageKey = 'index' | 'browse' | 'table' | InsightPageKey | TableKey
 
 type Section = {
   slug: string
@@ -189,17 +190,17 @@ function renderBreadcrumbs(crumbs: Crumb[]): string {
 
 const PROGRESS_LEGEND_HTML = `
   <div class="progress-legend" aria-label="Progress bar key">
-    <span class="progress-legend-item"><span class="progress-legend-swatch shipped"></span>Shipped</span>
-    <span class="progress-legend-item"><span class="progress-legend-swatch beta"></span>Beta</span>
-    <span class="progress-legend-item"><span class="progress-legend-swatch alpha"></span>Alpha &middot; in progress</span>
-    <span class="progress-legend-item"><span class="progress-legend-swatch planned"></span>Planned</span>
+    <span class="progress-legend-item"><span class="progress-legend-swatch shipped"></span>Landed</span>
+    <span class="progress-legend-item"><span class="progress-legend-swatch beta"></span>Validated</span>
+    <span class="progress-legend-item"><span class="progress-legend-swatch alpha"></span>Active &middot; review</span>
+    <span class="progress-legend-item"><span class="progress-legend-swatch planned"></span>Queued</span>
     <span class="progress-legend-item"><span class="progress-legend-swatch parked"></span>Parked (excluded from %)</span>
   </div>`
 
 function renderProgress(count: ProgressCount | null, opts: { compact?: boolean } = {}): string {
   if (!count || count.total === 0) return ''
   const segments = [
-    count.shipped > 0 ? `<span class="progress-seg shipped" style="width:${count.pct_shipped}%" title="${count.shipped} shipped"></span>` : '',
+    count.shipped > 0 ? `<span class="progress-seg shipped" style="width:${count.pct_shipped}%" title="${count.shipped} landed"></span>` : '',
     count.beta > 0 ? `<span class="progress-seg beta" style="width:${count.pct_beta}%" title="${count.beta} beta"></span>` : '',
     count.alpha > 0 ? `<span class="progress-seg alpha" style="width:${count.pct_alpha}%" title="${count.alpha} alpha"></span>` : '',
     count.planned > 0 ? `<span class="progress-seg planned" style="width:${count.pct_planned}%" title="${count.planned} planned"></span>` : '',
@@ -212,10 +213,10 @@ function renderProgress(count: ProgressCount | null, opts: { compact?: boolean }
 
   const meta: string[] = []
   meta.push(`<span class="progress-pct">${pct}%</span>`)
-  meta.push(`<span class="progress-count"><b>${count.shipped}</b> shipped</span>`)
-  if (count.beta) meta.push(`<span class="progress-count"><b>${count.beta}</b> beta</span>`)
-  if (count.alpha) meta.push(`<span class="progress-count"><b>${count.alpha}</b> alpha</span>`)
-  if (count.planned) meta.push(`<span class="progress-count"><b>${count.planned}</b> planned</span>`)
+  meta.push(`<span class="progress-count"><b>${count.shipped}</b> landed</span>`)
+  if (count.beta) meta.push(`<span class="progress-count"><b>${count.beta}</b> validated</span>`)
+  if (count.alpha) meta.push(`<span class="progress-count"><b>${count.alpha}</b> active</span>`)
+  if (count.planned) meta.push(`<span class="progress-count"><b>${count.planned}</b> queued</span>`)
   if (count.parked) meta.push(`<span class="progress-parked">${count.parked} parked</span>`)
 
   return `
@@ -446,7 +447,7 @@ function buildSidebar(sections: Section[], activeSectionSlug: string, activePage
   <aside class="sidebar">
     <div class="sidebar-header">
       <a href="../index.html" class="sidebar-back">Resources</a>
-      <div class="sidebar-title">Roadmaps</div>
+      <div class="sidebar-title">Product Truth</div>
     </div>
     <div class="sidebar-nav">
       <div class="nav-section">
@@ -738,6 +739,305 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     color: var(--secondary);
     font-size: 14px;
     font-weight: 600;
+  }
+  .insight-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 22px;
+  }
+  .insight-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    padding: 16px;
+  }
+  .insight-card:hover { border-color: var(--secondary); background: #FAFCFC; }
+  .insight-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .insight-value {
+    margin-top: 10px;
+    font-size: 30px;
+    line-height: 1;
+    font-weight: 800;
+    color: var(--ink);
+  }
+  .insight-note {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .lens-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+    gap: 20px;
+    margin-top: 20px;
+  }
+  .lens-stack { display: grid; gap: 14px; }
+  .lens-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .lens-table th {
+    text-align: left;
+    padding: 9px 10px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+    background: var(--sidebar-bg);
+  }
+  .lens-table td {
+    padding: 10px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: middle;
+  }
+  .lens-table a { color: var(--ink); text-decoration: none; font-weight: 650; }
+  .lens-table a:hover { color: var(--secondary); }
+  .lens-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .lens-muted { color: var(--muted); font-size: 12px; }
+  .maturity-strip {
+    display: grid;
+    grid-template-columns: repeat(11, minmax(40px, 1fr));
+    gap: 6px;
+    margin-top: 16px;
+  }
+  .maturity-cell {
+    min-height: 58px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: #fff;
+    padding: 8px;
+  }
+  .maturity-cell-value { font-size: 20px; line-height: 1; font-weight: 800; color: var(--ink); }
+  .maturity-cell-label {
+    margin-top: 7px;
+    font-size: 9px;
+    line-height: 1.2;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .maturity-cell-warn { border-color: rgba(201, 111, 59, 0.42); background: rgba(201, 111, 59, 0.06); }
+  .area-matrix {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .area-row {
+    display: grid;
+    grid-template-columns: 190px repeat(11, minmax(28px, 1fr));
+    gap: 6px;
+    align-items: center;
+  }
+  .area-row.area-header {
+    align-items: end;
+    margin-bottom: 2px;
+  }
+  .area-heading {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .area-col-label {
+    min-height: 28px;
+    display: flex;
+    align-items: end;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+  .area-name { font-size: 13px; font-weight: 700; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .area-dot {
+    min-height: 28px;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+  }
+  .area-dot.has-count { color: var(--ink); background: rgba(47, 124, 122, 0.08); border-color: rgba(47, 124, 122, 0.22); }
+  .area-dot.warn { background: rgba(201, 111, 59, 0.08); border-color: rgba(201, 111, 59, 0.28); }
+  .kanban-board {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(170px, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+    align-items: start;
+  }
+  .kanban-column {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    min-width: 0;
+  }
+  .kanban-heading {
+    padding: 12px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .kanban-heading h3 {
+    margin: 0;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .kanban-count {
+    min-width: 24px;
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: rgba(24, 33, 38, 0.06);
+    color: var(--muted);
+    text-align: center;
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .kanban-cards {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+  }
+  .kanban-card {
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 10px;
+    background: var(--sidebar-bg);
+  }
+  .kanban-card a {
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.3;
+  }
+  .kanban-card a:hover { color: var(--secondary); }
+  .kanban-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 10px;
+  }
+  .kanban-chip {
+    display: inline-flex;
+    border-radius: 4px;
+    background: #fff;
+    border: 1px solid var(--line);
+    padding: 2px 5px;
+    max-width: 100%;
+  }
+  .kanban-more {
+    color: var(--muted);
+    font-size: 11px;
+    padding: 2px 0 4px;
+  }
+  .schema-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .schema-box {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    padding: 14px;
+  }
+  .schema-box h3 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .schema-field {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+  }
+  .schema-field:first-of-type { border-top: 0; }
+  .schema-key {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+  .schema-desc { color: var(--muted); line-height: 1.45; }
+  .work-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .work-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 100px 110px 110px;
+    gap: 14px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .work-row:last-child { border-bottom: 0; }
+  .work-title a { color: var(--ink); text-decoration: none; font-weight: 700; }
+  .work-title a:hover { color: var(--secondary); }
+  .work-path { margin-top: 3px; color: var(--muted); font-size: 11px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .metric-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 800;
+    background: rgba(24, 33, 38, 0.06);
+    color: var(--ink);
+  }
+  .metric-pill.warn { background: rgba(201, 111, 59, 0.14); color: var(--accent); }
+  .metric-pill.good { background: rgba(47, 124, 122, 0.12); color: var(--secondary); }
+  @media (max-width: 1180px) {
+    .insight-grid { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+    .lens-grid { grid-template-columns: 1fr; }
+    .kanban-board { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
+  }
+  @media (max-width: 760px) {
+    .insight-grid { grid-template-columns: 1fr; }
+    .maturity-strip { grid-template-columns: repeat(3, minmax(70px, 1fr)); }
+    .area-row { grid-template-columns: 1fr repeat(4, minmax(28px, 1fr)); }
+    .area-row .area-dot:nth-of-type(n+5), .area-row .area-col-label:nth-of-type(n+5) { display: none; }
+    .kanban-board { grid-template-columns: 1fr; }
+    .schema-grid { grid-template-columns: 1fr; }
+    .schema-field { grid-template-columns: 1fr; gap: 4px; }
+    .work-row { grid-template-columns: 1fr 70px; }
+    .work-row > :nth-child(3), .work-row > :nth-child(4) { display: none; }
   }
   .pill {
     display: inline-flex;
@@ -1217,6 +1517,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   }
   .preview-cell-type { width: 90px; }
   .preview-cell-item { width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .preview-cell-maturity { width: 120px; }
   .preview-cell-status { width: 130px; }
   .preview-cell-delivery { width: 120px; font-size: 11px; color: var(--muted); white-space: nowrap; }
   .preview-cell-backlog { width: 130px; }
@@ -1276,6 +1577,37 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
   .type-badge.type-release { background: rgba(47, 124, 122, 0.12); color: var(--secondary); }
   .type-badge.type-ops { background: rgba(93, 105, 112, 0.14); color: var(--muted); }
   .type-badge.type-future { background: rgba(24, 33, 38, 0.06); color: var(--muted); font-style: italic; }
+  .maturity-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 110px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    background: rgba(24, 33, 38, 0.06);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .maturity-badge::before {
+    content: attr(data-level);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.72);
+    color: inherit;
+    font-size: 9px;
+  }
+  .maturity-rework-needed { background: rgba(201, 111, 59, 0.16); color: var(--accent); }
+  .maturity-buildable, .maturity-implemented { background: rgba(47, 124, 122, 0.12); color: var(--secondary); }
+  .maturity-released, .maturity-validated, .maturity-stable, .maturity-proven { background: rgba(47, 124, 122, 0.18); color: #236967; }
+  .maturity-unassessed { background: rgba(93, 105, 112, 0.10); color: var(--muted); }
   .filtered-out { display: none !important; }
   .spec-tree-file.preview-row {
     position: relative;
@@ -1673,15 +2005,16 @@ for (const spec of allSpecs) {
   specPathToTitle.set(spec.specPath, spec.title)
 }
 
-// Precompute per-spec delivery stats from subfeature rows: the best bucket
-// drives folder rollup bars, and the counts + Target/Delivered version sets
-// drive the Status / Delivery columns on the filterable browser.
+// Precompute per-spec work/backlog stats from tracking rows. These feed the
+// browser's known-work and backlog-pressure columns; release intent/history
+// remains a separate Target/Delivered axis.
 type SpecBucket = 'shipped' | 'beta' | 'alpha' | 'planned' | 'parked'
 type SpecStats = {
   bucket: SpecBucket | null
-  done: number
-  inProgress: number
-  planned: number
+  landed: number
+  outstanding: number
+  active: number
+  blocked: number
   parked: number
   total: number
   targets: Set<string>
@@ -1689,8 +2022,9 @@ type SpecStats = {
 }
 type BacklogStats = {
   resolved: number
-  inProgress: number
-  open: number
+  openPressure: number
+  active: number
+  blocked: number
   parked: number
   total: number
 }
@@ -1702,16 +2036,17 @@ const specBacklogStatsByPath = new Map<string, BacklogStats>()
   const subfeatureStatusToBucket = (status: string): SpecBucket | null => {
     const v = status.replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase()
     if (!v) return null
-    if (v === 'done' || v === 'implemented' || v === 'shipped') return 'shipped'
-    if (v === 'in progress' || v === 'alpha' || v === 'started') return 'alpha'
-    if (v === 'planned' || v === 'open') return 'planned'
+    if (v === 'landed' || v === 'done' || v === 'implemented' || v === 'shipped') return 'shipped'
+    if (v === 'active' || v === 'review' || v === 'in review' || v === 'in progress' || v === 'alpha' || v === 'started') return 'alpha'
+    if (v === 'queued' || v === 'planned' || v === 'open') return 'planned'
+    if (v === 'blocked') return 'alpha'
     if (v === 'deferred' || v === 'parked') return 'parked'
     return null
   }
   const getStats = (key: string): SpecStats => {
     let s = specStatsByPath.get(key)
     if (!s) {
-      s = { bucket: null, done: 0, inProgress: 0, planned: 0, parked: 0, total: 0, targets: new Set(), delivered: new Set() }
+      s = { bucket: null, landed: 0, outstanding: 0, active: 0, blocked: 0, parked: 0, total: 0, targets: new Set(), delivered: new Set() }
       specStatsByPath.set(key, s)
     }
     return s
@@ -1721,10 +2056,12 @@ const specBacklogStatsByPath = new Map<string, BacklogStats>()
     const bucket = subfeatureStatusToBucket(String(row.Status || ''))
     const stats = getStats(row.Spec)
     stats.total += 1
-    if (bucket === 'shipped') stats.done += 1
-    else if (bucket === 'alpha' || bucket === 'beta') stats.inProgress += 1
-    else if (bucket === 'planned') stats.planned += 1
+    const workState = String(row.Status || '').replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase()
+    if (bucket === 'shipped') stats.landed += 1
+    else if (bucket === 'alpha' || bucket === 'beta' || bucket === 'planned') stats.outstanding += 1
     else if (bucket === 'parked') stats.parked += 1
+    if (workState === 'active' || workState === 'review' || workState === 'in review' || workState === 'in progress' || workState === 'started' || workState === 'alpha') stats.active += 1
+    if (workState === 'blocked') stats.blocked += 1
 
     const target = normalizeVersion(String(row.Target || ''))
     if (target && target !== '—' && target !== '-') stats.targets.add(target)
@@ -1743,24 +2080,27 @@ const specBacklogStatsByPath = new Map<string, BacklogStats>()
   }
 
   // Backlog stats — distinct vocabulary from subfeatures.
-  const classifyBacklog = (status: string): 'resolved' | 'inProgress' | 'open' | 'parked' | null => {
+  const classifyBacklog = (status: string): 'resolved' | 'openPressure' | 'parked' | null => {
     const v = status.replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase()
     if (!v) return null
     if (v === 'resolved' || v === 'done' || v === 'closed') return 'resolved'
-    if (v === 'in progress' || v === 'started' || v === 'drafted') return 'inProgress'
-    if (v === 'open' || v === 'triaged' || v === 'planned') return 'open'
+    if (v === 'active' || v === 'blocked' || v === 'in progress' || v === 'started' || v === 'drafted') return 'openPressure'
+    if (v === 'open' || v === 'triaged' || v === 'planned') return 'openPressure'
     if (v === 'parked' || v === 'deferred') return 'parked'
     return null
   }
   for (const row of snapshot.tables.backlog?.rows || []) {
     let s = specBacklogStatsByPath.get(row.Spec)
     if (!s) {
-      s = { resolved: 0, inProgress: 0, open: 0, parked: 0, total: 0 }
+      s = { resolved: 0, openPressure: 0, active: 0, blocked: 0, parked: 0, total: 0 }
       specBacklogStatsByPath.set(row.Spec, s)
     }
     s.total += 1
+    const status = String(row.Status || '').replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase()
     const b = classifyBacklog(String(row.Status || ''))
     if (b) s[b] += 1
+    if (status === 'active' || status === 'in progress' || status === 'started' || status === 'drafted') s.active += 1
+    if (status === 'blocked') s.blocked += 1
   }
 }
 
@@ -1768,16 +2108,19 @@ function renderSpecBacklogCell(stats: BacklogStats | undefined): string {
   if (!stats || stats.total === 0) return '<span class="preview-empty">—</span>'
   const seg = (n: number, cls: string) =>
     n > 0 ? `<span class="rollup-seg ${cls}" style="width:${(n / stats.total) * 100}%"></span>` : ''
-  const bar = `<span class="rollup-bar rollup-bar-tight">${seg(stats.resolved, 'shipped')}${seg(stats.inProgress, 'alpha')}${seg(stats.open, 'planned')}</span>`
-  return `<span class="spec-status-cell">${bar}<span class="spec-status-count">${stats.resolved}/${stats.total}</span></span>`
+  const bar = `<span class="rollup-bar rollup-bar-tight">${seg(stats.resolved, 'shipped')}${seg(stats.openPressure, 'planned')}</span>`
+  const unresolved = stats.openPressure
+  const title = `${unresolved} open pressure · ${stats.resolved} resolved${stats.parked ? ` · ${stats.parked} parked` : ''}`
+  return `<span class="spec-status-cell" title="${escAttr(title)}">${bar}<span class="spec-status-count">${unresolved}/${stats.total}</span></span>`
 }
 
 function renderSpecStatusCell(stats: SpecStats | undefined): string {
   if (!stats || stats.total === 0) return '<span class="preview-empty">—</span>'
   const seg = (n: number, cls: string) =>
     n > 0 ? `<span class="rollup-seg ${cls}" style="width:${(n / stats.total) * 100}%"></span>` : ''
-  const bar = `<span class="rollup-bar rollup-bar-tight">${seg(stats.done, 'shipped')}${seg(stats.inProgress, 'alpha')}${seg(stats.planned, 'planned')}</span>`
-  return `<span class="spec-status-cell">${bar}<span class="spec-status-count">${stats.done}/${stats.total}</span></span>`
+  const bar = `<span class="rollup-bar rollup-bar-tight">${seg(stats.landed, 'shipped')}${seg(stats.outstanding, 'planned')}</span>`
+  const title = `${stats.outstanding} outstanding · ${stats.landed} landed${stats.parked ? ` · ${stats.parked} parked` : ''}`
+  return `<span class="spec-status-cell" title="${escAttr(title)}">${bar}<span class="spec-status-count">${stats.outstanding}/${stats.total}</span></span>`
 }
 
 function renderSpecDeliveryCell(stats: SpecStats | undefined): string {
@@ -1790,6 +2133,381 @@ function renderSpecDeliveryCell(stats: SpecStats | undefined): string {
   return `<span class="spec-delivery-cell"><span class="spec-delivery-target">${escHtml(targetStr)}</span> <span class="spec-delivery-arrow">→</span> <span class="spec-delivery-delivered">${escHtml(deliveredStr)}</span></span>`
 }
 
+type MaturityInfo = {
+  label: string
+  level: string
+  slug: string
+}
+
+const MATURITY_LEVELS: Record<string, MaturityInfo> = {
+  unassessed: { label: 'Unassessed', level: '0', slug: 'unassessed' },
+  sketch: { label: 'Sketch', level: '1', slug: 'sketch' },
+  draft: { label: 'Draft', level: '2', slug: 'draft' },
+  specified: { label: 'Specified', level: '3', slug: 'specified' },
+  buildable: { label: 'Buildable', level: '4', slug: 'buildable' },
+  implemented: { label: 'Implemented', level: '5', slug: 'implemented' },
+  released: { label: 'Released', level: '6', slug: 'released' },
+  validated: { label: 'Validated', level: '7', slug: 'validated' },
+  stable: { label: 'Stable', level: '8', slug: 'stable' },
+  proven: { label: 'Proven', level: '9', slug: 'proven' },
+  'rework needed': { label: 'Rework Needed', level: 'R', slug: 'rework-needed' },
+  rework: { label: 'Rework Needed', level: 'R', slug: 'rework-needed' },
+}
+
+function maturityForSpec(spec: SpecMeta): MaturityInfo {
+  const raw = (spec.frontmatter.maturity || spec.frontmatter.spec_maturity || '').trim()
+  const key = raw.toLowerCase()
+  return MATURITY_LEVELS[key] || (raw ? { label: raw, level: '?', slug: raw.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'custom' } : MATURITY_LEVELS.unassessed)
+}
+
+function renderSpecMaturityCell(spec: SpecMeta): string {
+  const m = maturityForSpec(spec)
+  return `<span class="maturity-badge maturity-${escAttr(m.slug)}" data-level="${escAttr(m.level)}" title="Maturity: ${escAttr(m.label)}">${escHtml(m.label)}</span>`
+}
+
+type InsightSpec = {
+  spec: SpecMeta
+  row: PreviewRow
+  maturity: MaturityInfo
+  work: SpecStats | undefined
+  backlog: BacklogStats | undefined
+  area: string
+  folder: string
+}
+
+const MATURITY_ORDER = ['Unassessed', 'Sketch', 'Draft', 'Specified', 'Buildable', 'Implemented', 'Released', 'Validated', 'Stable', 'Proven', 'Rework Needed']
+
+function maturityIndex(label: string): number {
+  const idx = MATURITY_ORDER.indexOf(label)
+  return idx === -1 ? 99 : idx
+}
+
+function topAreaForSpec(spec: SpecMeta): string {
+  let segments = spec.relPath.split('/').filter(Boolean)
+  if (segments[0] === 'specs') segments = segments.slice(1)
+  if (segments[0] === 'engine' && segments[1]) return `engine/${segments[1]}`
+  return segments[0] || '(root)'
+}
+
+function folderForSpec(spec: SpecMeta): string {
+  let segments = spec.relPath.split('/').filter(Boolean)
+  if (segments[0] === 'specs') segments = segments.slice(1)
+  return segments.slice(0, -1).join('/')
+}
+
+function buildInsightSpecs(specs: SpecMeta[]): InsightSpec[] {
+  return specs.map((spec) => ({
+    spec,
+    row: extractPreviewRow(spec.frontmatter),
+    maturity: maturityForSpec(spec),
+    work: specStatsByPath.get(spec.specPath),
+    backlog: specBacklogStatsByPath.get(spec.specPath),
+    area: topAreaForSpec(spec),
+    folder: folderForSpec(spec),
+  }))
+}
+
+function sumOutstanding(items: InsightSpec[]): number {
+  return items.reduce((n, item) => n + (item.work?.outstanding || 0), 0)
+}
+
+function sumLanded(items: InsightSpec[]): number {
+  return items.reduce((n, item) => n + (item.work?.landed || 0), 0)
+}
+
+function sumBacklogPressure(items: InsightSpec[]): number {
+  return items.reduce((n, item) => n + (item.backlog?.openPressure || 0), 0)
+}
+
+function renderInsightCards(items: InsightSpec[], baseHref = ''): string {
+  const unassessed = items.filter((i) => i.maturity.label === 'Unassessed').length
+  const rework = items.filter((i) => i.maturity.label === 'Rework Needed').length
+  const outstanding = sumOutstanding(items)
+  const pressure = sumBacklogPressure(items)
+  const landed = sumLanded(items)
+  return `
+    <div class="insight-grid">
+      <a class="insight-card" href="${baseHref}maturity.html">
+        <div class="insight-label">Maturity</div>
+        <div class="insight-value">${items.length - unassessed}</div>
+        <div class="insight-note">${unassessed} unassessed${rework ? ` · ${rework} rework needed` : ''}</div>
+      </a>
+      <a class="insight-card" href="${baseHref}work.html">
+        <div class="insight-label">Known Work</div>
+        <div class="insight-value">${outstanding}</div>
+        <div class="insight-note">${landed} landed work rows</div>
+      </a>
+      <a class="insight-card" href="${baseHref}pressure.html">
+        <div class="insight-label">Backlog Pressure</div>
+        <div class="insight-value">${pressure}</div>
+        <div class="insight-note">open, triaged, active, or blocked backlog rows</div>
+      </a>
+      <a class="insight-card" href="${baseHref}releases.html">
+        <div class="insight-label">Release Lens</div>
+        <div class="insight-value">${new Set(items.flatMap((i) => [...(i.work?.targets || new Set<string>())])).size}</div>
+        <div class="insight-note">target releases/cycles represented</div>
+      </a>
+    </div>`
+}
+
+function renderMaturityStrip(items: InsightSpec[]): string {
+  const counts = new Map<string, number>()
+  for (const label of MATURITY_ORDER) counts.set(label, 0)
+  for (const item of items) counts.set(item.maturity.label, (counts.get(item.maturity.label) || 0) + 1)
+  return `<div class="maturity-strip">${MATURITY_ORDER.map((label) => {
+    const info = MATURITY_LEVELS[label.toLowerCase()] || (label === 'Rework Needed' ? MATURITY_LEVELS['rework needed'] : MATURITY_LEVELS.unassessed)
+    const count = counts.get(label) || 0
+    return `<div class="maturity-cell${label === 'Rework Needed' ? ' maturity-cell-warn' : ''}">
+      <div class="maturity-cell-value">${count}</div>
+      <div class="maturity-cell-label">${escHtml(info.level)} · ${escHtml(label)}</div>
+    </div>`
+  }).join('')}</div>`
+}
+
+function renderAreaMatrix(items: InsightSpec[]): string {
+  const byArea = new Map<string, InsightSpec[]>()
+  for (const item of items) {
+    const list = byArea.get(item.area) || []
+    list.push(item)
+    byArea.set(item.area, list)
+  }
+  const header = `<div class="area-row area-header">
+    <div class="area-heading">Area</div>
+    ${MATURITY_ORDER.map((label) => {
+      const info = MATURITY_LEVELS[label.toLowerCase()] || (label === 'Rework Needed' ? MATURITY_LEVELS['rework needed'] : MATURITY_LEVELS.unassessed)
+      return `<div class="area-col-label" title="${escAttr(label)}">${escHtml(info.level)}</div>`
+    }).join('')}
+  </div>`
+  const rows = [...byArea.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([area, areaItems]) => {
+      const counts = new Map<string, number>()
+      for (const item of areaItems) counts.set(item.maturity.label, (counts.get(item.maturity.label) || 0) + 1)
+      return `<div class="area-row">
+        <div class="area-name" title="${escAttr(area)}">${escHtml(area)}</div>
+        ${MATURITY_ORDER.map((label) => {
+          const count = counts.get(label) || 0
+          return `<div class="area-dot${count ? ' has-count' : ''}${label === 'Rework Needed' && count ? ' warn' : ''}" title="${escAttr(`${area}: ${count} ${label}`)}">${count || ''}</div>`
+        }).join('')}
+      </div>`
+    })
+    .join('')
+  return `<div class="area-matrix">${header}${rows}</div>`
+}
+
+type ActivityBucket = 'active' | 'blocked' | 'queued' | 'pressure' | 'landed' | 'parked'
+type ActivityCard = {
+  bucket: ActivityBucket
+  kind: 'work' | 'backlog'
+  title: string
+  specTitle: string
+  specUrl: string
+  status: string
+  key: string
+  type: string
+  target: string
+}
+
+const ACTIVITY_COLUMNS: Array<{ key: ActivityBucket; label: string }> = [
+  { key: 'active', label: 'Active' },
+  { key: 'blocked', label: 'Blocked' },
+  { key: 'queued', label: 'Queued Work' },
+  { key: 'pressure', label: 'Backlog Pressure' },
+  { key: 'landed', label: 'Landed / Resolved' },
+  { key: 'parked', label: 'Parked' },
+]
+
+function workBucket(status: string): ActivityBucket {
+  const v = status.replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase()
+  if (v === 'blocked') return 'blocked'
+  if (v === 'active' || v === 'review' || v === 'in review' || v === 'in progress' || v === 'started' || v === 'alpha') return 'active'
+  if (v === 'landed' || v === 'done' || v === 'implemented' || v === 'shipped') return 'landed'
+  if (v === 'parked' || v === 'deferred') return 'parked'
+  return 'queued'
+}
+
+function backlogBucket(status: string): ActivityBucket {
+  const v = status.replace(/\s*\([^)]*\)\s*$/, '').trim().toLowerCase()
+  if (v === 'blocked') return 'blocked'
+  if (v === 'active' || v === 'in progress' || v === 'started' || v === 'drafted') return 'active'
+  if (v === 'resolved' || v === 'done' || v === 'closed') return 'landed'
+  if (v === 'parked' || v === 'deferred') return 'parked'
+  return 'pressure'
+}
+
+function buildActivityCards(section: Section): ActivityCard[] {
+  const cards: ActivityCard[] = []
+  const subfeatures = snapshot.tables.subfeatures ? sectionRows(section, snapshot.tables.subfeatures) : []
+  const backlog = snapshot.tables.backlog ? sectionRows(section, snapshot.tables.backlog) : []
+  for (const row of subfeatures) {
+    const specUrl = specPathToUrl.get(row.Spec)
+    if (!specUrl) continue
+    cards.push({
+      bucket: workBucket(String(row.Status || '')),
+      kind: 'work',
+      title: row.Subfeature || row.Item || row.Key || 'Work row',
+      specTitle: specPathToTitle.get(row.Spec) || row.Spec,
+      specUrl,
+      status: row.Status || '',
+      key: row.Key || '',
+      type: row.Surface || 'work',
+      target: row.Target || '',
+    })
+  }
+  for (const row of backlog) {
+    const specUrl = specPathToUrl.get(row.Spec)
+    if (!specUrl) continue
+    cards.push({
+      bucket: backlogBucket(String(row.Status || '')),
+      kind: 'backlog',
+      title: row.Item || row.Subfeature || row.Key || 'Backlog row',
+      specTitle: specPathToTitle.get(row.Spec) || row.Spec,
+      specUrl,
+      status: row.Status || '',
+      key: row.Key || '',
+      type: row.Type || 'backlog',
+      target: '',
+    })
+  }
+  return cards
+}
+
+function renderActivityBoard(cards: ActivityCard[], limitPerColumn = 14): string {
+  if (!cards.length) return '<p class="lens-muted">No activity rows found.</p>'
+  return `<div class="kanban-board">${ACTIVITY_COLUMNS.map((col) => {
+    const columnCards = cards
+      .filter((card) => card.bucket === col.key)
+      .sort((a, b) => a.specTitle.localeCompare(b.specTitle) || a.title.localeCompare(b.title))
+    const visible = columnCards.slice(0, limitPerColumn)
+    return `<section class="kanban-column">
+      <div class="kanban-heading"><h3>${escHtml(col.label)}</h3><span class="kanban-count">${columnCards.length}</span></div>
+      <div class="kanban-cards">
+        ${visible.map((card) => `<article class="kanban-card">
+          <a href="${escHtml(card.specUrl)}">${escHtml(card.title)}</a>
+          <div class="kanban-meta">
+            ${card.key ? `<span class="kanban-chip">${escHtml(card.key)}</span>` : ''}
+            <span class="kanban-chip">${escHtml(card.kind)}</span>
+            ${card.type ? `<span class="kanban-chip">${escHtml(card.type)}</span>` : ''}
+            ${card.status ? `<span class="kanban-chip">${escHtml(card.status)}</span>` : ''}
+            ${card.target && card.target !== '—' ? `<span class="kanban-chip">${escHtml(card.target)}</span>` : ''}
+          </div>
+          <div class="work-path" title="${escAttr(card.specTitle)}">${escHtml(card.specTitle)}</div>
+        </article>`).join('') || '<p class="lens-muted">No rows.</p>'}
+        ${columnCards.length > visible.length ? `<div class="kanban-more">+${columnCards.length - visible.length} more rows</div>` : ''}
+      </div>
+    </section>`
+  }).join('')}</div>`
+}
+
+function renderWorkRows(items: InsightSpec[], mode: 'work' | 'pressure', limit = 24): string {
+  const sorted = [...items]
+    .sort((a, b) => {
+      const av = mode === 'work' ? (a.work?.outstanding || 0) : (a.backlog?.openPressure || 0)
+      const bv = mode === 'work' ? (b.work?.outstanding || 0) : (b.backlog?.openPressure || 0)
+      if (bv !== av) return bv - av
+      return a.spec.title.localeCompare(b.spec.title)
+    })
+    .filter((item) => (mode === 'work' ? (item.work?.total || 0) : (item.backlog?.total || 0)) > 0)
+    .slice(0, limit)
+  if (!sorted.length) return '<p class="lens-muted">No tracked rows found.</p>'
+  return `<div class="work-list">${sorted.map((item) => {
+    const outstanding = item.work?.outstanding || 0
+    const landed = item.work?.landed || 0
+    const pressure = item.backlog?.openPressure || 0
+    const resolved = item.backlog?.resolved || 0
+    return `<div class="work-row">
+      <div class="work-title">
+        <a href="${escHtml(item.spec.url)}">${escHtml(item.spec.title)}</a>
+        <div class="work-path">${escHtml(item.folder || item.spec.relPath)}</div>
+      </div>
+      <div><span class="metric-pill${mode === 'work' && outstanding ? ' warn' : ''}">${mode === 'work' ? outstanding : pressure}</span></div>
+      <div class="lens-muted">${mode === 'work' ? `${landed} landed` : `${resolved} resolved`}</div>
+      <div>${renderSpecMaturityCell(item.spec)}</div>
+    </div>`
+  }).join('')}</div>`
+}
+
+function renderMaturityRows(items: InsightSpec[], limit = 24): string {
+  const sorted = [...items]
+    .sort((a, b) => {
+      const ai = maturityIndex(a.maturity.label)
+      const bi = maturityIndex(b.maturity.label)
+      if (ai !== bi) return ai - bi
+      const pressureDelta = (b.backlog?.openPressure || 0) - (a.backlog?.openPressure || 0)
+      if (pressureDelta !== 0) return pressureDelta
+      return a.spec.title.localeCompare(b.spec.title)
+    })
+    .slice(0, limit)
+  if (!sorted.length) return '<p class="lens-muted">No specs found.</p>'
+  return `<div class="work-list">${sorted.map((item) => `<div class="work-row">
+      <div class="work-title">
+        <a href="${escHtml(item.spec.url)}">${escHtml(item.spec.title)}</a>
+        <div class="work-path">${escHtml(item.folder || item.spec.relPath)}</div>
+      </div>
+      <div>${renderSpecMaturityCell(item.spec)}</div>
+      <div class="lens-muted">${item.work?.outstanding || 0} work</div>
+      <div class="lens-muted">${item.backlog?.openPressure || 0} pressure</div>
+    </div>`).join('')}</div>`
+}
+
+function renderReleaseTable(items: InsightSpec[], kind: 'targets' | 'delivered'): string {
+  const counts = new Map<string, number>()
+  for (const item of items) {
+    const values = kind === 'targets' ? item.work?.targets : item.work?.delivered
+    for (const v of values || []) counts.set(v, (counts.get(v) || 0) + 1)
+  }
+  const rows = [...counts.entries()]
+    .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+    .map(([release, count]) => `<tr><td>${escHtml(release)}</td><td class="lens-num">${count}</td></tr>`)
+    .join('')
+  return `<table class="lens-table"><thead><tr><th>${kind === 'targets' ? 'Target' : 'Delivered'}</th><th>Rows</th></tr></thead><tbody>${rows || '<tr><td colspan="2" class="lens-muted">No release values recorded.</td></tr>'}</tbody></table>`
+}
+
+function renderSchemaBox(title: string, fields: Array<[string, string]>): string {
+  return `<section class="schema-box">
+    <h3>${escHtml(title)}</h3>
+    ${fields.map(([key, desc]) => `<div class="schema-field"><div class="schema-key">${escHtml(key)}</div><div class="schema-desc">${escHtml(desc)}</div></div>`).join('')}
+  </section>`
+}
+
+function renderSchemaReference(): string {
+  const maturityValues = MATURITY_ORDER.map((label) => {
+    const info = MATURITY_LEVELS[label.toLowerCase()] || (label === 'Rework Needed' ? MATURITY_LEVELS['rework needed'] : MATURITY_LEVELS.unassessed)
+    return `${info.level}=${label}`
+  }).join(', ')
+  return `<div class="schema-grid">
+    ${renderSchemaBox('Spec frontmatter', [
+      ['maturity', `Current trust level for the spec. Values: ${maturityValues}.`],
+      ['spec_schema', 'Version of the spec document schema used by this file.'],
+      ['roadmap_*', 'Current legacy grouping fields used to place specs in the corpus views.'],
+      ['doc_type / spec_type', 'Optional type hint for non-feature specs such as decision records, schemas, or operating docs.'],
+    ])}
+    ${renderSchemaBox('Known work rows', [
+      ['Key', 'Stable row identifier within the spec.'],
+      ['Subfeature', 'The work item or capability being tracked.'],
+      ['Surface', 'Where the work lands, such as mobile, web, backend, ops, or docs.'],
+      ['Status', 'Work state. Common values: Planned, Queued, Active, Review, Blocked, Landed, Parked.'],
+      ['Target', 'Release/cycle intent. This is not maturity.'],
+      ['Delivered', 'Historical delivery fact. This is not maturity.'],
+      ['Notes', 'Short context for agents and humans.'],
+    ])}
+    ${renderSchemaBox('Backlog rows', [
+      ['Key', 'Stable backlog row identifier within the spec.'],
+      ['Type', 'Pressure type, such as decision, dependency, enhancement, question, risk, or cleanup.'],
+      ['Item', 'The unresolved pressure or candidate work.'],
+      ['Status', 'Backlog state. Common values: Open, Triaged, Active, Blocked, Resolved, Parked.'],
+      ['Notes', 'Decision context, default proposal, or follow-up clue.'],
+    ])}
+    ${renderSchemaBox('Derived views', [
+      ['Maturity Map', 'Counts maturity by spec and by area. Missing maturity is Unassessed.'],
+      ['Activity Board', 'Groups known work and backlog rows by current activity state.'],
+      ['Known Work', 'Counts outstanding implementation/design rows from spec tracking tables.'],
+      ['Backlog Pressure', 'Counts unresolved backlog pressure separately from committed work.'],
+      ['Release Lens', 'Shows Target and Delivered as intent/history, separate from maturity.'],
+    ])}
+  </div>`
+}
+
 for (const section of sections) {
   const specsForSection = section.source
     ? specsBySource.get(section.source.id) || []
@@ -1800,6 +2518,36 @@ for (const section of sections) {
       label: 'Specs',
       href: routeFor(section.slug, 'browse'),
     }
+    const maturityPage = {
+      key: 'maturity' as const,
+      label: 'Maturity',
+      href: routeFor(section.slug, 'maturity'),
+    }
+    const activityPage = {
+      key: 'activity' as const,
+      label: 'Activity Board',
+      href: routeFor(section.slug, 'activity'),
+    }
+    const workPage = {
+      key: 'work' as const,
+      label: 'Known Work',
+      href: routeFor(section.slug, 'work'),
+    }
+    const pressurePage = {
+      key: 'pressure' as const,
+      label: 'Backlog Pressure',
+      href: routeFor(section.slug, 'pressure'),
+    }
+    const releasesPage = {
+      key: 'releases' as const,
+      label: 'Releases',
+      href: routeFor(section.slug, 'releases'),
+    }
+    const schemaPage = {
+      key: 'schema' as const,
+      label: 'Schema',
+      href: routeFor(section.slug, 'schema'),
+    }
     const tablePage = {
       key: 'table' as const,
       label: 'Specs (table)',
@@ -1807,10 +2555,10 @@ for (const section of sections) {
     }
     const hasOverview = section.pages.some((p) => p.key === 'index')
     if (hasOverview) {
-      section.pages.push(specsPage, tablePage)
+      section.pages.push(maturityPage, activityPage, workPage, pressurePage, releasesPage, schemaPage, specsPage, tablePage)
     } else {
-      // No Overview in this mode — Specs becomes the section's entry page.
-      section.pages.unshift(specsPage, tablePage)
+      // No Overview in this mode — Maturity becomes the section's entry page.
+      section.pages.unshift(maturityPage, activityPage, workPage, pressurePage, releasesPage, schemaPage, specsPage, tablePage)
     }
   }
 }
@@ -1819,17 +2567,17 @@ copyFileSync(SNAPSHOT_PATH, join(OUTPUT_DIR, 'roadmaps.json'))
 
 const searchIndex = [
   {
-    title: 'Roadmaps Overview',
+    title: 'Product Truth Overview',
     section: 'Overview',
     group: '',
-    snippet: 'Roadmaps home with portfolio and workstream sections.',
+    snippet: 'Product truth home with maturity, known work, backlog pressure, and release views.',
     url: 'index.html',
   },
   {
     title: 'Search',
     section: 'Overview',
     group: '',
-    snippet: 'Search across roadmap views, tracked rows, and workstream sections.',
+    snippet: 'Search across product truth views, tracked rows, and workstream sections.',
     url: 'search.html',
   },
 ]
@@ -1916,13 +2664,13 @@ for (const section of sections) {
     ? `
     <section class="panel">
       <h2>Progress</h2>
-      ${sectionDelivery ? `<div class="progress-group"><h3>Delivery <span class="progress-group-note">Subfeatures — see each spec page for detail</span></h3>${renderProgress(sectionDelivery)}</div>` : ''}
-      ${sectionBacklog ? `<div class="progress-group"><h3>Backlog <span class="progress-group-note">Open questions — see each spec page for detail</span></h3>${renderProgress(sectionBacklog)}</div>` : ''}
+      ${sectionDelivery ? `<div class="progress-group"><h3>Known work <span class="progress-group-note">Subfeatures/work rows — see each spec page for detail</span></h3>${renderProgress(sectionDelivery)}</div>` : ''}
+      ${sectionBacklog ? `<div class="progress-group"><h3>Backlog pressure <span class="progress-group-note">Open questions and tracked pressure — see each spec page for detail</span></h3>${renderProgress(sectionBacklog)}</div>` : ''}
     </section>`
     : ''
 
   const sectionCrumbs = renderBreadcrumbs([
-    { label: 'Roadmaps', href: 'index.html' },
+    { label: 'Product Truth', href: 'index.html' },
     { label: section.label },
   ])
 
@@ -1931,14 +2679,14 @@ for (const section of sections) {
       <div class="eyebrow">Kinetiq Core</div>
       ${sectionCrumbs}
       <h1>${escHtml(section.label)}</h1>
-      <p class="subhead">${section.source ? `Repository-specific roadmap views for ${escHtml(section.source.label)}.` : 'Combined cross-repo roadmap views across all configured sources.'}</p>
+      <p class="subhead">${section.source ? `Repository-specific product truth views for ${escHtml(section.source.label)}.` : 'Combined cross-repo product truth views across all configured sources.'}</p>
       <div class="meta">Snapshot generated ${escHtml(snapshot.generatedAt)} via ${escHtml(snapshot.generatedBy)}</div>
       ${PROGRESS_LEGEND_HTML}
       <div class="links">
-        <a href="index.html">Roadmaps home</a>
+        <a href="index.html">Product Truth home</a>
         <a href="roadmaps.json">Snapshot JSON</a>
       </div>
-      <div class="grid">${sectionCards || '<div class="source-meta">No roadmap views available for this section.</div>'}</div>
+      <div class="grid">${sectionCards || '<div class="source-meta">No product truth views available for this section.</div>'}</div>
     </section>
     ${progressPanel}
     ${sourcePanel}
@@ -1948,13 +2696,13 @@ for (const section of sections) {
   // index already covers this ground (overall progress + L1/L2 breakdown).
   if (section.pages.some((p) => p.key === 'index')) {
     const pagePath = routeFor(section.slug, 'index')
-    writeFileSync(join(OUTPUT_DIR, pagePath), pageShell(`${section.label} — Roadmaps`, sections, section.slug, 'index', overviewBody, pagePath))
+    writeFileSync(join(OUTPUT_DIR, pagePath), pageShell(`${section.label} — Product Truth`, sections, section.slug, 'index', overviewBody, pagePath))
 
     searchIndex.push({
       title: `${section.label} Overview`,
       section: section.label,
       group: '',
-      snippet: section.source ? `Repository-specific roadmap views for ${section.source.label}.` : 'Combined cross-repo roadmap views.',
+      snippet: section.source ? `Repository-specific product truth views for ${section.source.label}.` : 'Combined cross-repo product truth views.',
       url: routeFor(section.slug, 'index'),
     })
   }
@@ -2035,7 +2783,7 @@ for (const section of sections) {
     const tableProgressHtml = renderProgress(tableProgress)
 
     const tableCrumbs = renderBreadcrumbs([
-      { label: 'Roadmaps', href: 'index.html' },
+      { label: 'Product Truth', href: 'index.html' },
       { label: section.label, href: routeFor(section.slug, 'index') },
       { label: table.title },
     ])
@@ -2090,6 +2838,142 @@ for (const section of sections) {
   }
 }
 
+for (const section of sections) {
+  const specs = section.source
+    ? specsBySource.get(section.source.id) || []
+    : allSpecs.slice()
+  if (!specs.length) continue
+
+  const items = buildInsightSpecs(specs)
+  const activityCards = buildActivityCards(section)
+  const headingPrefix = SINGLE_SOURCE_MODE ? '' : `${section.label} — `
+  const crumbsFor = (label: string) => renderBreadcrumbs([
+    { label: 'Product Truth', href: 'index.html' },
+    { label: section.label, href: routeFor(section.slug, 'index') },
+    { label },
+  ])
+
+  const maturityBody = `
+    <section class="hero">
+      <div class="eyebrow">Product Truth</div>
+      ${crumbsFor('Maturity')}
+      <h1>${escHtml(`${headingPrefix}Maturity Map`)}</h1>
+      <p class="subhead">How much the spec corpus is trusted as product truth. Missing maturity is shown as Unassessed, not as success.</p>
+      ${renderInsightCards(items)}
+    </section>
+    <section class="panel">
+      <h2>Maturity heatmap</h2>
+      ${renderMaturityStrip(items)}
+    </section>
+    <section class="panel">
+      <h2>Maturity by area</h2>
+      ${renderAreaMatrix(items)}
+    </section>
+    <section class="panel">
+      <h2>Lowest maturity specs</h2>
+      ${renderMaturityRows(items, 18)}
+    </section>`
+  const maturityPath = routeFor(section.slug, 'maturity')
+  writeFileSync(join(OUTPUT_DIR, maturityPath), pageShell(`${headingPrefix}Maturity Map`, sections, section.slug, 'maturity', maturityBody, maturityPath))
+
+  const activityBody = `
+    <section class="hero">
+      <div class="eyebrow">Product Truth</div>
+      ${crumbsFor('Activity Board')}
+      <h1>${escHtml(`${headingPrefix}Activity Board`)}</h1>
+      <p class="subhead">A kanban-style view of current work and backlog activity. It shows state, not permanent completeness.</p>
+      ${renderInsightCards(items)}
+    </section>
+    <section class="panel">
+      <h2>Activity board</h2>
+      ${renderActivityBoard(activityCards)}
+    </section>`
+  const activityPath = routeFor(section.slug, 'activity')
+  writeFileSync(join(OUTPUT_DIR, activityPath), pageShell(`${headingPrefix}Activity Board`, sections, section.slug, 'activity', activityBody, activityPath))
+
+  const workBody = `
+    <section class="hero">
+      <div class="eyebrow">Product Truth</div>
+      ${crumbsFor('Known Work')}
+      <h1>${escHtml(`${headingPrefix}Known Work`)}</h1>
+      <p class="subhead">Known implementation/design work remaining in the corpus. Counts come from work rows, not estimated percent complete.</p>
+      ${renderInsightCards(items)}
+    </section>
+    <section class="panel">
+      <h2>Most outstanding work</h2>
+      ${renderWorkRows(items, 'work', 40)}
+    </section>`
+  const workPath = routeFor(section.slug, 'work')
+  writeFileSync(join(OUTPUT_DIR, workPath), pageShell(`${headingPrefix}Known Work`, sections, section.slug, 'work', workBody, workPath))
+
+  const pressureBody = `
+    <section class="hero">
+      <div class="eyebrow">Product Truth</div>
+      ${crumbsFor('Backlog Pressure')}
+      <h1>${escHtml(`${headingPrefix}Backlog Pressure`)}</h1>
+      <p class="subhead">Unresolved decisions, dependencies, candidate enhancements, and other tracked pressure that has not necessarily become committed work.</p>
+      ${renderInsightCards(items)}
+    </section>
+    <section class="panel">
+      <h2>Highest pressure specs</h2>
+      ${renderWorkRows(items, 'pressure', 40)}
+    </section>`
+  const pressurePath = routeFor(section.slug, 'pressure')
+  writeFileSync(join(OUTPUT_DIR, pressurePath), pageShell(`${headingPrefix}Backlog Pressure`, sections, section.slug, 'pressure', pressureBody, pressurePath))
+
+  const releaseBody = `
+    <section class="hero">
+      <div class="eyebrow">Product Truth</div>
+      ${crumbsFor('Releases')}
+      <h1>${escHtml(`${headingPrefix}Release Lens`)}</h1>
+      <p class="subhead">Target is intent. Delivered is historical fact. This view keeps both visible without treating either as maturity.</p>
+      ${renderInsightCards(items)}
+    </section>
+    <section class="panel">
+      <h2>Release rows</h2>
+      <div class="lens-grid">
+        <div class="lens-stack">
+          <h3>Targets</h3>
+          ${renderReleaseTable(items, 'targets')}
+        </div>
+        <div class="lens-stack">
+          <h3>Delivered</h3>
+          ${renderReleaseTable(items, 'delivered')}
+        </div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Specs with outstanding work</h2>
+      ${renderWorkRows(items, 'work', 24)}
+    </section>`
+  const releasePath = routeFor(section.slug, 'releases')
+  writeFileSync(join(OUTPUT_DIR, releasePath), pageShell(`${headingPrefix}Release Lens`, sections, section.slug, 'releases', releaseBody, releasePath))
+
+  const schemaBody = `
+    <section class="hero">
+      <div class="eyebrow">Product Truth</div>
+      ${crumbsFor('Schema')}
+      <h1>${escHtml(`${headingPrefix}Schema`)}</h1>
+      <p class="subhead">The current human and agent-facing schema of the corpus: fields, vocabulary, and derived views.</p>
+      ${renderInsightCards(items)}
+    </section>
+    <section class="panel">
+      <h2>Relevant fields</h2>
+      ${renderSchemaReference()}
+    </section>`
+  const schemaPath = routeFor(section.slug, 'schema')
+  writeFileSync(join(OUTPUT_DIR, schemaPath), pageShell(`${headingPrefix}Schema`, sections, section.slug, 'schema', schemaBody, schemaPath))
+
+  searchIndex.push(
+    { title: `${headingPrefix}Maturity Map`, section: section.label, group: 'Product Truth', snippet: 'Maturity heatmap and area matrix.', url: maturityPath },
+    { title: `${headingPrefix}Activity Board`, section: section.label, group: 'Product Truth', snippet: 'Kanban-style activity view for work and backlog rows.', url: activityPath },
+    { title: `${headingPrefix}Known Work`, section: section.label, group: 'Product Truth', snippet: 'Outstanding known work by spec.', url: workPath },
+    { title: `${headingPrefix}Backlog Pressure`, section: section.label, group: 'Product Truth', snippet: 'Open backlog pressure by spec.', url: pressurePath },
+    { title: `${headingPrefix}Release Lens`, section: section.label, group: 'Product Truth', snippet: 'Target and delivered release facts.', url: releasePath },
+    { title: `${headingPrefix}Schema`, section: section.label, group: 'Product Truth', snippet: 'Relevant fields and vocabulary for the spec corpus.', url: schemaPath },
+  )
+}
+
 for (const tableKey of ['subfeatures', 'backlog'] as const) {
   const table = snapshot.tables[tableKey]
   if (!table) continue
@@ -2126,7 +3010,7 @@ for (const spec of allSpecs) {
   const folderSegments = pathSegments.slice(0, -1)
   if (folderSegments[0] === 'specs') folderSegments.shift()
   const specCrumbs = renderBreadcrumbs([
-    { label: 'Roadmaps', href: 'index.html' },
+    { label: 'Product Truth', href: 'index.html' },
     { label: spec.sourceLabel, href: backToSectionHref },
     { label: 'Specs', href: backToSpecsHref },
     ...folderSegments.map((seg) => ({ label: seg })),
@@ -2134,7 +3018,7 @@ for (const spec of allSpecs) {
   ])
 
   const frontmatterPairs = Object.entries(spec.frontmatter)
-    .filter(([k]) => k.startsWith('roadmap_'))
+    .filter(([k]) => k.startsWith('roadmap_') || k === 'maturity' || k === 'spec_maturity' || k === 'doc_type' || k === 'spec_type')
     .map(([k, v]) => `<div class="spec-fm-row"><span class="spec-fm-key">${escHtml(k.replace(/^roadmap_/, '').replace(/_/g, ' '))}</span><span class="spec-fm-val">${escHtml(v)}</span></div>`)
     .join('')
   const frontmatterPanel = frontmatterPairs
@@ -2317,10 +3201,10 @@ function renderRollupBar(roll: FolderRollup): string {
   const seg = (count: number, cls: string) =>
     count > 0 ? `<span class="rollup-seg ${cls}" style="width:${(count / denom) * 100}%"></span>` : ''
   const tip = [
-    roll.shipped && `${roll.shipped} shipped`,
-    roll.beta && `${roll.beta} beta`,
-    roll.alpha && `${roll.alpha} alpha`,
-    roll.planned && `${roll.planned} planned`,
+    roll.shipped && `${roll.shipped} landed`,
+    roll.beta && `${roll.beta} validated`,
+    roll.alpha && `${roll.alpha} active/review`,
+    roll.planned && `${roll.planned} queued`,
     roll.parked && `${roll.parked} parked`,
   ]
     .filter(Boolean)
@@ -2380,10 +3264,12 @@ function groupParentChildFiles(files: SpecMeta[]): Array<{ parent: SpecMeta; chi
 function renderPreviewLeaf(spec: SpecMeta, isChild: boolean): string {
   const filename = spec.relPath.split('/').pop() || spec.relPath
   const row = extractPreviewRow(spec.frontmatter)
-  const searchText = [spec.title, spec.relPath, row.group, row.item].filter(Boolean).join(' ').toLowerCase()
+  const maturity = maturityForSpec(spec)
+  const searchText = [spec.title, spec.relPath, row.group, row.item, maturity.label].filter(Boolean).join(' ').toLowerCase()
   const dataAttrs = [
     `data-search="${escAttr(searchText)}"`,
     `data-type="${escAttr(row.type || '—')}"`,
+    `data-maturity="${escAttr(maturity.label)}"`,
   ].join(' ')
 
   const classes = `spec-tree-file preview-row${isChild ? ' preview-row--child' : ''}`
@@ -2398,6 +3284,7 @@ function renderPreviewLeaf(spec: SpecMeta, isChild: boolean): string {
     </a>
     <span class="preview-cell preview-cell-type">${row.type ? `<span class="type-badge type-${escAttr(row.type)}">${escHtml(row.type)}</span>` : '<span class="preview-empty">—</span>'}</span>
     <span class="preview-cell preview-cell-item" title="${escAttr(row.item)}">${row.item ? escHtml(row.item) : '<span class="preview-empty">—</span>'}</span>
+    <span class="preview-cell preview-cell-maturity">${renderSpecMaturityCell(spec)}</span>
     <span class="preview-cell preview-cell-status">${renderSpecStatusCell(specStatsByPath.get(spec.specPath))}</span>
     <span class="preview-cell preview-cell-delivery">${renderSpecDeliveryCell(specStatsByPath.get(spec.specPath))}</span>
     <span class="preview-cell preview-cell-backlog">${renderSpecBacklogCell(specBacklogStatsByPath.get(spec.specPath))}</span>
@@ -2444,6 +3331,12 @@ function distinctValues(specs: SpecMeta[], fieldPicker: (row: PreviewRow) => str
     const v = fieldPicker(extractPreviewRow(spec.frontmatter))
     if (v) set.add(v)
   }
+  return [...set].sort((a, b) => a.localeCompare(b))
+}
+
+function distinctMaturityValues(specs: SpecMeta[]): string[] {
+  const set = new Set<string>()
+  for (const spec of specs) set.add(maturityForSpec(spec).label)
   return [...set].sort((a, b) => a.localeCompare(b))
 }
 
@@ -2536,17 +3429,19 @@ for (const section of sections) {
 
   const indexUrl = routeFor(section.slug, 'browse')
   const specsCrumbs = renderBreadcrumbs([
-    { label: 'Roadmaps', href: 'index.html' },
+    { label: 'Product Truth', href: 'index.html' },
     { label: section.label, href: routeFor(section.slug, 'index') },
     { label: 'Specs' },
   ])
 
   const typeValues = distinctValues(specs, (r) => r.type)
+  const maturityValues = distinctMaturityValues(specs)
 
   const filterBar = `
     <div class="preview-controls">
       <input type="text" class="preview-search" placeholder="Filter by title, path, item…" />
       ${renderFilterSelect('type', 'Type', typeValues)}
+      ${renderFilterSelect('maturity', 'Maturity', maturityValues)}
       <button type="button" class="preview-reset">Reset</button>
       <button type="button" class="preview-toggle-all" data-state="expanded">Collapse all</button>
       <span class="preview-count"><span class="preview-count-visible">${specs.length} of ${specs.length}</span> specs</span>
@@ -2557,9 +3452,10 @@ for (const section of sections) {
       <span class="preview-header-spec">Spec</span>
       <span class="preview-cell preview-cell-type">Type</span>
       <span class="preview-cell preview-cell-item">Item</span>
-      <span class="preview-cell preview-cell-status">Status</span>
+      <span class="preview-cell preview-cell-maturity">Maturity</span>
+      <span class="preview-cell preview-cell-status">Known work</span>
       <span class="preview-cell preview-cell-delivery">Delivery</span>
-      <span class="preview-cell preview-cell-backlog">Backlog</span>
+      <span class="preview-cell preview-cell-backlog">Backlog pressure</span>
     </div>`
 
   const treeHtml = renderPreviewTreeNode(previewRoot, 0)
@@ -2596,7 +3492,7 @@ for (const section of sections) {
   const tableUrl = routeFor(section.slug, 'table')
   const tableHeading = SINGLE_SOURCE_MODE ? 'Specs (table)' : `${section.label} — Specs (table)`
   const tableCrumbs = renderBreadcrumbs([
-    { label: 'Roadmaps', href: 'index.html' },
+    { label: 'Product Truth', href: 'index.html' },
     { label: section.label, href: routeFor(section.slug, 'index') },
     { label: 'Specs (table)' },
   ])
@@ -2604,17 +3500,19 @@ for (const section of sections) {
   const tableRows = specRowsSorted
     .map((spec) => {
       const row = extractPreviewRow(spec.frontmatter)
+      const maturity = maturityForSpec(spec)
       const filename = spec.relPath.split('/').pop() || spec.relPath
       let segments = spec.relPath.split('/').filter(Boolean)
       if (segments[0] === 'specs') segments = segments.slice(1)
       const folderSegs = segments.slice(0, -1)
       const pathLabel = folderSegs.join(' › ')
-      const searchText = [spec.title, spec.relPath, row.group, row.item].filter(Boolean).join(' ').toLowerCase()
-      return `<tr class="preview-row spec-table-row" data-search="${escAttr(searchText)}" data-type="${escAttr(row.type || '—')}">
+      const searchText = [spec.title, spec.relPath, row.group, row.item, maturity.label].filter(Boolean).join(' ').toLowerCase()
+      return `<tr class="preview-row spec-table-row" data-search="${escAttr(searchText)}" data-type="${escAttr(row.type || '—')}" data-maturity="${escAttr(maturity.label)}">
         <td class="spec-table-path" title="${escAttr(folderSegs.join('/'))}">${escHtml(pathLabel)}</td>
         <td class="spec-table-spec"><a href="${escHtml(spec.url)}">${escHtml(spec.title)}</a><span class="spec-table-file">${escHtml(filename)}</span></td>
         <td class="spec-table-type">${row.type ? `<span class="type-badge type-${escAttr(row.type)}">${escHtml(row.type)}</span>` : '<span class="preview-empty">—</span>'}</td>
         <td class="spec-table-item" title="${escAttr(row.item)}">${row.item ? escHtml(row.item) : '<span class="preview-empty">—</span>'}</td>
+        <td class="spec-table-maturity">${renderSpecMaturityCell(spec)}</td>
         <td class="spec-table-status">${renderSpecStatusCell(specStatsByPath.get(spec.specPath))}</td>
         <td class="spec-table-delivery">${renderSpecDeliveryCell(specStatsByPath.get(spec.specPath))}</td>
         <td class="spec-table-backlog">${renderSpecBacklogCell(specBacklogStatsByPath.get(spec.specPath))}</td>
@@ -2625,6 +3523,7 @@ for (const section of sections) {
     <div class="preview-controls">
       <input type="text" class="preview-search" placeholder="Filter by title, path, item…" />
       ${renderFilterSelect('type', 'Type', typeValues)}
+      ${renderFilterSelect('maturity', 'Maturity', maturityValues)}
       <button type="button" class="preview-reset">Reset</button>
       <span class="preview-count"><span class="preview-count-visible">${specs.length} of ${specs.length}</span> specs</span>
     </div>`
@@ -2644,12 +3543,13 @@ for (const section of sections) {
             <th class="spec-table-spec">Spec</th>
             <th class="spec-table-type">Type</th>
             <th class="spec-table-item">Item</th>
-            <th class="spec-table-status">Status</th>
+            <th class="spec-table-maturity">Maturity</th>
+            <th class="spec-table-status">Known work</th>
             <th class="spec-table-delivery">Delivery</th>
-            <th class="spec-table-backlog">Backlog</th>
+            <th class="spec-table-backlog">Backlog pressure</th>
           </tr>
         </thead>
-        <tbody>${tableRows || '<tr><td colspan="7">No specs found.</td></tr>'}</tbody>
+        <tbody>${tableRows || '<tr><td colspan="8">No specs found.</td></tr>'}</tbody>
       </table>
     </section>
     ${PREVIEW_SCRIPT}
@@ -2751,12 +3651,15 @@ const rootBreakdown = buildRootBreakdown()
 
 const overallDelivery = snapshot.progress.delivery.all
 const overallBacklog = snapshot.progress.backlog.all
+const rootInsightItems = buildInsightSpecs(allSpecs)
+const rootInsightBaseHref = SINGLE_SOURCE_MODE ? '' : 'portfolio/'
 
 const overallProgressPanel = `
   <section class="panel">
-    <h2>Overall progress</h2>
-    <div class="progress-group"><h3>Delivery <span class="progress-group-note">Subfeatures across all sources — see each spec page for detail</span></h3>${renderProgress(overallDelivery)}</div>
-    <div class="progress-group"><h3>Backlog <span class="progress-group-note">Open questions and tracked items across all sources — see each spec page for detail</span></h3>${renderProgress(overallBacklog)}</div>
+    <h2>Corpus Signals</h2>
+    ${renderInsightCards(rootInsightItems, rootInsightBaseHref)}
+    <div class="progress-group"><h3>Known work <span class="progress-group-note">Subfeatures/work rows across all sources — see each spec page for detail</span></h3>${renderProgress(overallDelivery)}</div>
+    <div class="progress-group"><h3>Backlog pressure <span class="progress-group-note">Open questions and tracked pressure across all sources — see each spec page for detail</span></h3>${renderProgress(overallBacklog)}</div>
   </section>`
 
 const rootSourceRows = snapshot.sources
@@ -2779,14 +3682,17 @@ const rootSourceRows = snapshot.sources
 const indexBody = `
   <section class="hero">
     <div class="eyebrow">Kinetiq Core</div>
-    <h1>Roadmaps</h1>
-    <p class="subhead">Living blueprints across the product. Overall progress summarises delivery and backlog; the breakdown lists top-level and second-level spec folders with a release-aware status bar.</p>
+    <h1>Product Truth</h1>
+    <p class="subhead">Living blueprints across the product. Start with maturity, activity, known work, backlog pressure, release facts, and the schema reference; use the spec browser only when you need the full corpus drilldown.</p>
     <div class="meta">Snapshot generated ${escHtml(snapshot.generatedAt)} via ${escHtml(snapshot.generatedBy)}</div>
     ${PROGRESS_LEGEND_HTML}
     <div class="links">
-      <a href="../index.html">Resources home</a>
-      <a href="roadmaps.json">Snapshot JSON</a>
-      <a href="search.html">Search</a>
+      <a href="${rootInsightBaseHref}maturity.html">Maturity Map</a>
+      <a href="${rootInsightBaseHref}activity.html">Activity Board</a>
+      <a href="${rootInsightBaseHref}work.html">Known Work</a>
+      <a href="${rootInsightBaseHref}pressure.html">Backlog Pressure</a>
+      <a href="${rootInsightBaseHref}releases.html">Release Lens</a>
+      <a href="${rootInsightBaseHref}schema.html">Schema</a>
     </div>
   </section>
   ${overallProgressPanel}
@@ -2797,7 +3703,7 @@ const indexBody = `
   </section>
 `
 
-writeFileSync(join(OUTPUT_DIR, 'index.html'), pageShell('Roadmaps', sections, 'root', 'index', indexBody, 'index.html'))
+writeFileSync(join(OUTPUT_DIR, 'index.html'), pageShell('Product Truth', sections, 'root', 'index', indexBody, 'index.html'))
 
 const searchBody = `
   <section class="hero">
