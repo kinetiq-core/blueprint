@@ -794,6 +794,25 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     overflow-y: auto;
   }
   .inspector-inner { padding: 18px 16px 24px; }
+  .inspector-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+  }
+  .inspector-close {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--content-card-bg);
+    color: var(--muted);
+    font: inherit;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .inspector-close:hover { color: var(--ink); border-color: var(--primary); }
   .inspector-kicker {
     font-size: 10px;
     font-weight: 850;
@@ -864,6 +883,52 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     color: var(--ink);
     overflow-wrap: anywhere;
   }
+  .inspector-details {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .inspector-detail-block {
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--content-card-bg);
+    padding: 10px;
+  }
+  .inspector-detail-title {
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .inspector-detail-text {
+    margin-top: 7px;
+    color: var(--ink);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .inspector-row-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .inspector-row-item {
+    border-top: 1px solid var(--line);
+    padding-top: 8px;
+  }
+  .inspector-row-item:first-child { border-top: 0; padding-top: 0; }
+  .inspector-row-title {
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.3;
+  }
+  .inspector-row-meta {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.35;
+  }
   [data-inspector-title] { cursor: default; }
   [data-inspector-title]:focus-visible {
     outline: 2px solid var(--focus);
@@ -873,8 +938,10 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     outline: 2px solid color-mix(in srgb, var(--primary) 45%, transparent);
     outline-offset: 2px;
   }
-  body.inspector-disabled .inspector { display: none; }
-  body.inspector-disabled .main {
+  body.inspector-disabled .inspector,
+  body.inspector-closed .inspector { display: none; }
+  body.inspector-disabled .main,
+  body.inspector-closed .main {
     width: calc(100% - 260px);
     margin-right: 0;
   }
@@ -958,6 +1025,24 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     padding: 16px;
   }
   .insight-card:hover { border-color: var(--secondary); background: var(--panel-subtle); }
+  .dashboard-heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .dashboard-heading h2 { margin: 0; }
+  .dashboard-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--control-bg);
+  }
   .console-layout {
     display: grid;
     grid-template-columns: 220px minmax(0, 1fr);
@@ -2438,8 +2523,13 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     </main>
     <aside class="inspector" data-inspector-panel aria-label="Spec inspector">
       <div class="inspector-inner">
-        <div class="inspector-kicker" data-inspector-context>Selection</div>
-        <div class="inspector-title" data-inspector-title-out>Spec Inspector</div>
+        <div class="inspector-top">
+          <div>
+            <div class="inspector-kicker" data-inspector-context>Selection</div>
+            <div class="inspector-title" data-inspector-title-out>Spec Inspector</div>
+          </div>
+          <button type="button" class="inspector-close" data-inspector-close aria-label="Close inspector">&times;</button>
+        </div>
         <div class="inspector-summary" data-inspector-summary>Select a spec, work row, or activity card to inspect maturity, work, pressure, release intent, and source context without leaving the current view.</div>
         <div class="inspector-actions">
           <a href="#" data-inspector-open hidden>Open Spec</a>
@@ -2451,6 +2541,7 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
           <div class="inspector-field"><div class="inspector-label">Pressure</div><div class="inspector-value">—</div></div>
           <div class="inspector-field wide"><div class="inspector-label">Source</div><div class="inspector-value">—</div></div>
         </div>
+        <div class="inspector-details" data-inspector-details></div>
       </div>
     </aside>
   </div>
@@ -2485,6 +2576,15 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     }
     var inspector = document.querySelector('[data-inspector-panel]');
     var selectedInspectorItem = null;
+    function parseRows(value) {
+      if (!value) return [];
+      try {
+        var parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
     function field(label, value, wide) {
       var node = document.createElement('div');
       node.className = 'inspector-field' + (wide ? ' wide' : '');
@@ -2498,8 +2598,54 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
       node.appendChild(valueNode);
       return node;
     }
+    function detailBlock(title, text) {
+      var block = document.createElement('section');
+      block.className = 'inspector-detail-block';
+      var heading = document.createElement('div');
+      heading.className = 'inspector-detail-title';
+      heading.textContent = title;
+      var body = document.createElement('div');
+      body.className = 'inspector-detail-text';
+      body.textContent = text || '—';
+      block.appendChild(heading);
+      block.appendChild(body);
+      return block;
+    }
+    function rowBlock(title, rows) {
+      var block = document.createElement('section');
+      block.className = 'inspector-detail-block';
+      var heading = document.createElement('div');
+      heading.className = 'inspector-detail-title';
+      heading.textContent = title;
+      block.appendChild(heading);
+      if (!rows.length) {
+        var empty = document.createElement('div');
+        empty.className = 'inspector-detail-text';
+        empty.textContent = 'No rows recorded.';
+        block.appendChild(empty);
+        return block;
+      }
+      var list = document.createElement('div');
+      list.className = 'inspector-row-list';
+      rows.forEach(function(row) {
+        var item = document.createElement('div');
+        item.className = 'inspector-row-item';
+        var rowTitle = document.createElement('div');
+        rowTitle.className = 'inspector-row-title';
+        rowTitle.textContent = row.title || row.key || 'Tracked row';
+        var meta = document.createElement('div');
+        meta.className = 'inspector-row-meta';
+        meta.textContent = [row.key, row.type, row.status, row.target].filter(Boolean).join(' · ');
+        item.appendChild(rowTitle);
+        if (meta.textContent) item.appendChild(meta);
+        list.appendChild(item);
+      });
+      block.appendChild(list);
+      return block;
+    }
     function selectInspectorItem(item) {
       if (!inspector || !item) return;
+      document.body.classList.remove('inspector-closed', 'inspector-disabled');
       if (selectedInspectorItem) selectedInspectorItem.classList.remove('inspector-selected');
       selectedInspectorItem = item;
       selectedInspectorItem.classList.add('inspector-selected');
@@ -2508,9 +2654,10 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
       var summary = inspector.querySelector('[data-inspector-summary]');
       var open = inspector.querySelector('[data-inspector-open]');
       var grid = inspector.querySelector('[data-inspector-grid]');
+      var details = inspector.querySelector('[data-inspector-details]');
       if (title) title.textContent = item.dataset.inspectorTitle || 'Selected item';
       if (context) context.textContent = item.dataset.inspectorContext || 'Spec';
-      if (summary) summary.textContent = item.dataset.inspectorPath || '';
+      if (summary) summary.textContent = item.dataset.inspectorDescription || item.dataset.inspectorPath || '';
       if (open) {
         var href = item.dataset.inspectorHref || '';
         open.hidden = !href;
@@ -2528,6 +2675,21 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
           field('Delivered', item.dataset.inspectorDelivered, true)
         );
       }
+      if (details) {
+        details.replaceChildren(
+          detailBlock('Description', item.dataset.inspectorDescription || item.dataset.inspectorPath || ''),
+          rowBlock('Known Work', parseRows(item.dataset.inspectorWorkRows)),
+          rowBlock('Backlog', parseRows(item.dataset.inspectorBacklogRows))
+        );
+      }
+    }
+    var closeInspector = inspector && inspector.querySelector('[data-inspector-close]');
+    if (closeInspector) {
+      closeInspector.addEventListener('click', function() {
+        if (selectedInspectorItem) selectedInspectorItem.classList.remove('inspector-selected');
+        selectedInspectorItem = null;
+        document.body.classList.add('inspector-closed');
+      });
     }
     document.addEventListener('click', function(e) {
       var target = e.target;
@@ -2553,6 +2715,24 @@ function pageShell(title: string, sections: Section[], activeSectionSlug: string
     } else {
       document.body.classList.add('inspector-disabled');
     }
+    document.querySelectorAll('[data-global-target-filter]').forEach(function(filter) {
+      var root = filter.closest('[data-global-filter-root]') || document;
+      var items = root.querySelectorAll('[data-global-targets]');
+      var count = root.querySelector('[data-global-target-count]');
+      function applyTargetFilter() {
+        var value = filter.value || '';
+        var visible = 0;
+        items.forEach(function(item) {
+          var raw = item.getAttribute('data-global-targets') || '';
+          var match = !value || raw.split('|').indexOf(value) !== -1;
+          item.classList.toggle('filtered-out', !match);
+          if (match) visible += 1;
+        });
+        if (count) count.textContent = visible;
+      }
+      filter.addEventListener('change', applyTargetFilter);
+      applyTargetFilter();
+    });
   })();
   </script>
   ${SEARCH_SCRIPT}
@@ -2643,6 +2823,8 @@ type BacklogStats = {
 const specBucketByPath = new Map<string, SpecBucket>()
 const specStatsByPath = new Map<string, SpecStats>()
 const specBacklogStatsByPath = new Map<string, BacklogStats>()
+const specWorkRowsByPath = new Map<string, SnapshotRow[]>()
+const specBacklogRowsByPath = new Map<string, SnapshotRow[]>()
 {
   const rank: Record<SpecBucket, number> = { shipped: 4, beta: 3, alpha: 2, planned: 1, parked: 0 }
   const subfeatureStatusToBucket = (status: string): SpecBucket | null => {
@@ -2665,6 +2847,10 @@ const specBacklogStatsByPath = new Map<string, BacklogStats>()
   }
   const normalizeVersion = (v: string) => v.replace(/\s*\([^)]*\)\s*$/, '').trim()
   for (const row of snapshot.tables.subfeatures?.rows || []) {
+    const workRows = specWorkRowsByPath.get(row.Spec) || []
+    workRows.push(row)
+    specWorkRowsByPath.set(row.Spec, workRows)
+
     const bucket = subfeatureStatusToBucket(String(row.Status || ''))
     const stats = getStats(row.Spec)
     stats.total += 1
@@ -2702,6 +2888,10 @@ const specBacklogStatsByPath = new Map<string, BacklogStats>()
     return null
   }
   for (const row of snapshot.tables.backlog?.rows || []) {
+    const backlogRows = specBacklogRowsByPath.get(row.Spec) || []
+    backlogRows.push(row)
+    specBacklogRowsByPath.set(row.Spec, backlogRows)
+
     let s = specBacklogStatsByPath.get(row.Spec)
     if (!s) {
       s = { resolved: 0, openPressure: 0, active: 0, blocked: 0, parked: 0, total: 0 }
@@ -2881,9 +3071,74 @@ function targetsForItem(item: InsightSpec): string[] {
   return [...(item.work?.targets || new Set<string>())].filter((v) => v && v !== '—' && v !== '-')
 }
 
+const specDescriptionCache = new Map<string, string>()
+
+function cleanInspectorMarkdown(value: string): string {
+  return value
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function firstMeaningfulParagraph(markdown: string): string {
+  const chunks = markdown
+    .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '')
+    .replace(/^#\s+.+$/m, '')
+    .split(/\n\s*\n/)
+    .map((chunk) => chunk.trim())
+  for (const chunk of chunks) {
+    if (!chunk || chunk.startsWith('#') || chunk.startsWith('|') || chunk.startsWith('---')) continue
+    if (/^[-*]\s+/.test(chunk)) continue
+    const cleaned = cleanInspectorMarkdown(chunk.replace(/\n/g, ' '))
+    if (cleaned.length > 20) return cleaned
+  }
+  return ''
+}
+
+function specDescription(spec: SpecMeta): string {
+  const cached = specDescriptionCache.get(spec.specPath)
+  if (cached !== undefined) return cached
+  let description = ''
+  try {
+    const markdown = readFileSync(spec.fullPath, 'utf8')
+    const scope = markdown.match(/\*\*Scope:\*\*\s*([^\n]+)/i)
+    if (scope?.[1]) description = cleanInspectorMarkdown(scope[1])
+    if (!description) {
+      const purpose = markdown.match(/^##\s+Purpose\s+([\s\S]*?)(?:\n##\s+|\n---\s*$|$)/im)
+      description = firstMeaningfulParagraph(purpose?.[1] || markdown)
+    }
+  } catch {
+    description = ''
+  }
+  specDescriptionCache.set(spec.specPath, description)
+  return description
+}
+
+function inspectorRowSummary(row: SnapshotRow, kind: 'work' | 'backlog') {
+  return {
+    key: row.Key || '',
+    title: kind === 'work' ? (row.Subfeature || row.Item || row.Key || 'Work row') : (row.Item || row.Subfeature || row.Key || 'Backlog row'),
+    type: row.Surface || row.Type || '',
+    status: row.Status || '',
+    target: row.Target || '',
+  }
+}
+
+function inspectorRowsForSpec(spec: SpecMeta) {
+  return {
+    work: (specWorkRowsByPath.get(spec.specPath) || []).slice(0, 8).map((row) => inspectorRowSummary(row, 'work')),
+    backlog: (specBacklogRowsByPath.get(spec.specPath) || []).slice(0, 8).map((row) => inspectorRowSummary(row, 'backlog')),
+  }
+}
+
 function inspectorAttrs(item: InsightSpec, context = 'Spec'): string {
   const targets = targetsForItem(item)
   const delivered = [...(item.work?.delivered || new Set<string>())].filter((v) => v && v !== '—' && v !== '-')
+  const rows = inspectorRowsForSpec(item.spec)
   return [
     'tabindex="0"',
     `data-inspector-title="${escAttr(item.spec.title)}"`,
@@ -2897,6 +3152,9 @@ function inspectorAttrs(item: InsightSpec, context = 'Spec'): string {
     `data-inspector-work="${escAttr(String(item.work?.outstanding || 0))}"`,
     `data-inspector-pressure="${escAttr(String(item.backlog?.openPressure || 0))}"`,
     `data-inspector-path="${escAttr(item.spec.relPath)}"`,
+    `data-inspector-description="${escAttr(specDescription(item.spec))}"`,
+    `data-inspector-work-rows="${escAttr(JSON.stringify(rows.work))}"`,
+    `data-inspector-backlog-rows="${escAttr(JSON.stringify(rows.backlog))}"`,
   ].join(' ')
 }
 
@@ -2922,6 +3180,7 @@ function lensAttrs(item: InsightSpec, extraSearch: string[] = []): string {
     `data-maturity="${escAttr(attrValue(item.maturity.label))}"`,
     `data-type="${escAttr(attrValue(item.row.type || 'unspecified'))}"`,
     `data-target="${escAttr(targets.join('|'))}"`,
+    `data-global-targets="${escAttr(targets.join('|'))}"`,
     inspectorAttrs(item),
   ].join(' ')
 }
@@ -2944,6 +3203,20 @@ function renderLensControls(items: InsightSpec[]): string {
     ${select('target', 'Target', targets)}
     <button type="button" class="preview-reset lens-reset">Reset</button>
     <span class="lens-count"><strong class="lens-count-visible">${items.length}</strong> visible</span>
+  </div>`
+}
+
+function renderGlobalTargetFilter(items: InsightSpec[]): string {
+  const targets = [...new Set(items.flatMap(targetsForItem))]
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+  if (!targets.length) return ''
+  return `<div class="dashboard-filter">
+    <label class="preview-filter-label">Target Version<select class="preview-filter" data-global-target-filter>
+      <option value="">All target versions</option>
+      ${targets.map((v) => `<option value="${escAttr(v)}">${escHtml(v)}</option>`).join('')}
+    </select></label>
+    <span class="lens-count"><strong data-global-target-count>0</strong> matching items</span>
   </div>`
 }
 
@@ -3087,7 +3360,8 @@ function renderScopeRail(items: InsightSpec[]): string {
     .map(([area, areaItems]) => {
       const work = sumOutstanding(areaItems)
       const pressure = sumBacklogPressure(areaItems)
-      return `<div class="scope-row" title="${escAttr(area)}">
+      const targets = [...new Set(areaItems.flatMap(targetsForItem))].join('|')
+      return `<div class="scope-row" title="${escAttr(area)}" data-global-targets="${escAttr(targets)}">
         <div class="scope-name">${escHtml(area)}</div>
         <div class="scope-count">${areaItems.length}</div>
         <div class="scope-meta">${work} work · ${pressure} pressure</div>
@@ -3101,8 +3375,11 @@ function renderScopeRail(items: InsightSpec[]): string {
 }
 
 function renderDashboardConsole(items: InsightSpec[], baseHref = ''): string {
-  return `<section class="panel">
-    <h2>Product Truth Console</h2>
+  return `<section class="panel" data-global-filter-root>
+    <div class="dashboard-heading">
+      <h2>Product Truth Console</h2>
+      ${renderGlobalTargetFilter(items)}
+    </div>
     <div class="console-layout">
       ${renderScopeRail(items)}
       <div class="console-main">
@@ -3312,6 +3589,9 @@ function activityInspectorAttrs(card: ActivityCard): string {
     `data-inspector-work="${escAttr(card.kind === 'work' ? '1' : '0')}"`,
     `data-inspector-pressure="${escAttr(card.kind === 'backlog' ? '1' : '0')}"`,
     `data-inspector-path="${escAttr(card.specTitle)}"`,
+    `data-inspector-description="${escAttr(`${card.kind === 'work' ? 'Work' : 'Backlog'} row on ${card.specTitle}.`)}"`,
+    `data-inspector-work-rows="${escAttr(JSON.stringify(card.kind === 'work' ? [inspectorRowSummary({ Key: card.key, Subfeature: card.title, Surface: card.type, Status: card.status, Target: card.target }, 'work')] : []))}"`,
+    `data-inspector-backlog-rows="${escAttr(JSON.stringify(card.kind === 'backlog' ? [inspectorRowSummary({ Key: card.key, Item: card.title, Type: card.type, Status: card.status, Target: card.target }, 'backlog')] : []))}"`,
   ].join(' ')
 }
 
@@ -3327,7 +3607,7 @@ function renderActivityBoard(cards: ActivityCard[], limitPerColumn = 14): string
       <div class="kanban-cards">
         ${visible.map((card) => {
           const searchText = [card.title, card.specTitle, card.area, card.maturity, card.kind, card.type, card.status, card.target].filter(Boolean).join(' ').toLowerCase()
-          return `<article class="kanban-card" data-lens-item data-search="${escAttr(searchText)}" data-area="${escAttr(attrValue(card.area))}" data-maturity="${escAttr(attrValue(card.maturity))}" data-type="${escAttr(attrValue(card.type))}" data-target="${escAttr(card.target && card.target !== '—' ? card.target : '')}" ${activityInspectorAttrs(card)}>
+          return `<article class="kanban-card" data-lens-item data-search="${escAttr(searchText)}" data-area="${escAttr(attrValue(card.area))}" data-maturity="${escAttr(attrValue(card.maturity))}" data-type="${escAttr(attrValue(card.type))}" data-target="${escAttr(card.target && card.target !== '—' ? card.target : '')}" data-global-targets="${escAttr(card.target && card.target !== '—' ? card.target : '')}" ${activityInspectorAttrs(card)}>
           <a href="${escHtml(card.specUrl)}">${escHtml(card.title)}</a>
           <div class="kanban-meta">
             ${card.key ? `<span class="kanban-chip">${escHtml(card.key)}</span>` : ''}
