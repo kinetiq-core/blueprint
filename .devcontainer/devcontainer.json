@@ -1,27 +1,18 @@
-// Dev Container for blueprint (@kinetiq-core/blueprint).
+// Optional Dev Container for blueprint (@kinetiq-core/blueprint).
 //
 // Standalone CLI tool (tsx/TypeScript); no web server, no database, no
 // sibling-repo mounts (blueprint does not consume kinetiq-specs). No
 // forwarded ports — if a server is ever added later, pick a port well
-// outside the kinetiq web stacks' 43xx range (see memory: port scheme).
+// outside the kinetiq web stacks' 43xx range.
+//
+// Preferred daily workflow is VS Code opened through WSL and commands run on
+// the WSL host. This container is only for isolated/reproducible toolchain work.
 {
   "name": "blueprint",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspaces/kinetiq-core/blueprint",
   "remoteUser": "node",
-  "features": {
-    "ghcr.io/devcontainers/features/github-cli:1": {}
-  },
-  "mounts": [
-    // ~/.claude and ~/.codex are NOT bind-mounted from host. Both CLIs use
-    // shared Docker volumes (kinetiq-claude-home, kinetiq-codex-home) declared
-    // in docker-compose.yml so container-side state stays separate from the
-    // host's installs and avoids Windows↔Linux filesystem incompatibilities.
-    "source=${localEnv:USERPROFILE}${localEnv:HOME}/.gitconfig,target=/home/node/.gitconfig,type=bind,consistency=cached",
-    "source=${localEnv:USERPROFILE}${localEnv:HOME}/.ssh,target=/home/node/.ssh,type=bind,readonly",
-    "source=${localEnv:APPDATA}/GitHub CLI,target=/home/node/.config/gh,type=bind,consistency=cached"
-  ],
   "customizations": {
     "vscode": {
       "extensions": [

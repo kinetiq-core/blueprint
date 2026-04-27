@@ -3,7 +3,7 @@ roadmap_type: backend
 roadmap_group: Examples
 roadmap_item: Example spec
 roadmap_phase: Now
-spec_schema: 2
+spec_schema: 3
 ---
 
 # Example Spec

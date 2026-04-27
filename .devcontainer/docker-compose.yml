@@ -5,26 +5,7 @@ services:
       dockerfile: Dockerfile
     command: sleep infinity
     volumes:
-      # Mount the whole kinetiq-core parent dir so in-container Claude can
-      # cross-reference sibling repos (specs, library, business, etc.) as
-      # first-class RW dirs. Trade-off: exposes unrelated siblings; accepted
-      # for simplicity (no per-sibling mount maintenance as new repos land).
+      # Mount the WSL-host kinetiq-core parent so sibling repo references use
+      # the same relative paths inside and outside the optional container.
       # REQUIRES this repo to live at kinetiq-core/<stack>/ on host.
       - ../..:/workspaces/kinetiq-core:cached
-
-      # Named volume for node_modules — shadows the repo's node_modules dir
-      # inside the parent mount. Keeps Linux-container binaries separate
-      # from any Windows-host install.
-      - blueprint-node-modules:/workspaces/kinetiq-core/blueprint/node_modules
-
-      # Shared Claude/Codex home volumes — one auth + state shared across all
-      # kinetiq containers. See kinetiq-workspace/docs/{claude,codex}-setup.md.
-      - kinetiq-claude-home:/home/node/.claude
-      - kinetiq-codex-home:/home/node/.codex
-
-volumes:
-  blueprint-node-modules:
-  kinetiq-claude-home:
-    external: true
-  kinetiq-codex-home:
-    external: true
