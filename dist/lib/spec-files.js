@@ -21,13 +21,15 @@ export function collectSpecFiles(sourceId, rootPath) {
     const specsDir = join(rootPath, 'docs', 'specs');
     const developersDir = join(rootPath, 'docs', 'developers');
     for (const file of walkMarkdown(specsDir, 'specs')) {
+        if (!isSpecMarkdown(basename(file.fullPath)))
+            continue;
         files.push({
             ...file,
             specPath: `${sourceId}/docs/${file.relPath.replace(/\\/g, '/')}`,
         });
     }
     for (const file of walkMarkdown(developersDir, 'developers')) {
-        if (!basename(file.fullPath).startsWith('spec_'))
+        if (!isSpecMarkdown(basename(file.fullPath)))
             continue;
         files.push({
             ...file,
@@ -35,4 +37,7 @@ export function collectSpecFiles(sourceId, rootPath) {
         });
     }
     return files;
+}
+function isSpecMarkdown(name) {
+    return name.startsWith('spec_');
 }

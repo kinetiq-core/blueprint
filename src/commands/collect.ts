@@ -19,8 +19,8 @@ export async function collect(flags: Record<string, string | boolean>): Promise<
 
     rmSync(mirrorRoot, { recursive: true, force: true })
 
-    const specsCount = copyFiltered(join(originRoot, 'docs', 'specs'), join(mirrorRoot, 'docs', 'specs'), () => true)
-    const devCount = copyFiltered(join(originRoot, 'docs', 'developers'), join(mirrorRoot, 'docs', 'developers'), (n) => n.startsWith('spec_'))
+    const specsCount = copyFiltered(join(originRoot, 'docs', 'specs'), join(mirrorRoot, 'docs', 'specs'), isSpecMarkdown)
+    const devCount = copyFiltered(join(originRoot, 'docs', 'developers'), join(mirrorRoot, 'docs', 'developers'), isSpecMarkdown)
 
     const count = specsCount + devCount
     total += count
@@ -44,4 +44,8 @@ function copyFiltered(srcDir: string, destDir: string, filter: (name: string) =>
     }
   }
   return count
+}
+
+function isSpecMarkdown(name: string): boolean {
+  return name.startsWith('spec_')
 }

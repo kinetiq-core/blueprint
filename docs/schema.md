@@ -1,4 +1,4 @@
-# Spec schema (v2)
+# Spec schema
 
 Blueprint expects each spec file to be a markdown document with structured
 frontmatter and (optionally) two tracking tables in the body: Subfeatures
@@ -12,7 +12,8 @@ roadmap_type: backend | feature | release | ops | future
 roadmap_group: <grouping name>
 roadmap_item: <spec title>
 roadmap_phase: Now | Soon | Later | Parked
-spec_schema: 2
+maturity: Unassessed | Sketch | Draft | Buildable | Implemented | Trial | Provisional | Validated | Stability Candidate | Stable | Rework Needed
+spec_schema: 3
 ---
 ```
 
@@ -21,8 +22,27 @@ spec_schema: 2
 - **`roadmap_phase`** — commitment timing, orthogonal to release delivery.
   (Parked wins over everything — a parked spec is not "in flight" regardless
   of Maturity.)
-- **`spec_schema: 2`** — tells tooling which schema version this spec uses.
-  Let this drift and you'll regret it when the v1→v2 migration runs.
+- **`maturity`** — current trust level for the spec as product truth. This is
+  separate from work state, release target, and delivery history.
+- **`spec_schema: 3`** — tells tooling which schema version this spec uses.
+  Keep this current so migration and validation scripts know which vocabulary
+  applies.
+
+Maturity levels:
+
+| Level | Label |
+| --- | --- |
+| 0 | Unassessed |
+| 1 | Sketch |
+| 2 | Draft |
+| 3 | Buildable |
+| 4 | Implemented |
+| 5 | Trial |
+| 6 | Provisional |
+| 7 | Validated |
+| 8 | Stability Candidate |
+| 9 | Stable |
+| R | Rework Needed |
 
 ## Subfeatures table
 
@@ -98,10 +118,10 @@ roadmap_backend_maturity: Planned | Started | Alpha | Beta | Ready
 
 (Same pattern for `release`, `ops`, and `future`.)
 
-Note: under schema v2, spec-level `roadmap_maturity` is deprecated — per-
-subfeature Status + Target + Delivered carries this information honestly.
-Frontmatter-level maturity is kept for the per-surface (Mobile, Web) shape
-and for backwards compatibility during migration.
+Note: legacy `roadmap_maturity` and `roadmap_*_maturity` fields are
+deprecated. Use frontmatter `maturity` for product-truth confidence, known-work
+row `Status` for work state, `Target` for release intent, and `Delivered` for
+release history.
 
 ## Derived (not stored)
 

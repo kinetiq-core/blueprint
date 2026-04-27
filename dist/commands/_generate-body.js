@@ -399,10 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .join('')}
       <div class="nav-section">
         <div class="nav-section-title">Reference</div>
-        ${sections
-            .flatMap((section) => section.pages.filter((page) => page.key === 'schema').map((page) => ({ section, page })))
-            .map(({ section, page }) => `<a href="${page.href}" class="sidebar-link ${section.slug === activeSectionSlug && page.key === activePageKey ? 'active' : ''}">${escHtml(section.label === 'Specs' ? page.label : `${section.label} ${page.label}`)}</a>`)
-            .join('')}
+        <a href="schema.html" class="sidebar-link ${activeSectionSlug === 'root' && activePageKey === 'schema' ? 'active' : ''}">Schema</a>
       </div>
     </div>
   </aside>`;
@@ -1155,7 +1152,7 @@ document.addEventListener('DOMContentLoaded', function() {
     margin-top: 20px;
   }
   .lens-stack { display: grid; gap: 14px; min-width: 0; }
-  .release-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .release-grid { grid-template-columns: 1fr; }
   .release-grid .lens-table { table-layout: fixed; }
   .release-grid .lens-table th:first-child,
   .release-grid .lens-table td:first-child {
@@ -2109,8 +2106,8 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 9px;
   }
   .maturity-rework-needed { background: rgba(201, 111, 59, 0.16); color: var(--accent); }
-  .maturity-buildable, .maturity-implemented { background: rgba(47, 124, 122, 0.12); color: var(--secondary); }
-  .maturity-released, .maturity-validated, .maturity-stable, .maturity-proven { background: rgba(47, 124, 122, 0.18); color: #236967; }
+  .maturity-buildable, .maturity-implemented, .maturity-trial, .maturity-provisional { background: rgba(47, 124, 122, 0.12); color: var(--secondary); }
+  .maturity-validated, .maturity-stability-candidate, .maturity-stable { background: rgba(47, 124, 122, 0.18); color: #236967; }
   .maturity-unassessed { background: rgba(93, 105, 112, 0.10); color: var(--muted); }
   .filtered-out { display: none !important; }
   .spec-tree-file.preview-row {
@@ -2479,6 +2476,37 @@ document.addEventListener('DOMContentLoaded', function() {
   (function() {
     var topbar = document.getElementById('topbar');
     if (!topbar) return;
+    var sidebarNav = document.querySelector('.sidebar-nav');
+    var sidebarScrollKey = 'productTruthSidebarScrollTop';
+    function saveSidebarScroll() {
+      if (!sidebarNav) return;
+      try { localStorage.setItem(sidebarScrollKey, String(sidebarNav.scrollTop || 0)); } catch (e) {}
+    }
+    if (sidebarNav) {
+      try {
+        var savedSidebarScroll = Number(localStorage.getItem(sidebarScrollKey) || '0');
+        if (Number.isFinite(savedSidebarScroll) && savedSidebarScroll > 0) {
+          requestAnimationFrame(function() { sidebarNav.scrollTop = savedSidebarScroll; });
+        }
+      } catch (e) {}
+      var sidebarScrollQueued = false;
+      sidebarNav.addEventListener('scroll', function() {
+        if (sidebarScrollQueued) return;
+        sidebarScrollQueued = true;
+        requestAnimationFrame(function() {
+          sidebarScrollQueued = false;
+          saveSidebarScroll();
+        });
+      }, { passive: true });
+      window.addEventListener('pagehide', saveSidebarScroll);
+      document.addEventListener('click', function(e) {
+        var target = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (!target) return;
+        var href = target.getAttribute('href') || '';
+        if (!href || href.charAt(0) === '#') return;
+        saveSidebarScroll();
+      }, true);
+    }
     document.addEventListener('keydown', function(e) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
@@ -2894,15 +2922,19 @@ document.addEventListener('DOMContentLoaded', function() {
         unassessed: { label: 'Unassessed', level: '0', slug: 'unassessed' },
         sketch: { label: 'Sketch', level: '1', slug: 'sketch' },
         draft: { label: 'Draft', level: '2', slug: 'draft' },
-        specified: { label: 'Specified', level: '3', slug: 'specified' },
-        buildable: { label: 'Buildable', level: '4', slug: 'buildable' },
-        implemented: { label: 'Implemented', level: '5', slug: 'implemented' },
-        released: { label: 'Released', level: '6', slug: 'released' },
+        buildable: { label: 'Buildable', level: '3', slug: 'buildable' },
+        implemented: { label: 'Implemented', level: '4', slug: 'implemented' },
+        trial: { label: 'Trial', level: '5', slug: 'trial' },
+        provisional: { label: 'Provisional', level: '6', slug: 'provisional' },
         validated: { label: 'Validated', level: '7', slug: 'validated' },
-        stable: { label: 'Stable', level: '8', slug: 'stable' },
-        proven: { label: 'Proven', level: '9', slug: 'proven' },
+        'stability candidate': { label: 'Stability Candidate', level: '8', slug: 'stability-candidate' },
+        stable: { label: 'Stable', level: '9', slug: 'stable' },
         'rework needed': { label: 'Rework Needed', level: 'R', slug: 'rework-needed' },
         rework: { label: 'Rework Needed', level: 'R', slug: 'rework-needed' },
+        // Legacy aliases from the pre-readiness maturity ladder.
+        specified: { label: 'Buildable', level: '3', slug: 'buildable' },
+        released: { label: 'Provisional', level: '6', slug: 'provisional' },
+        proven: { label: 'Stable', level: '9', slug: 'stable' },
     };
     function maturityForSpec(spec) {
         const raw = (spec.frontmatter.maturity || spec.frontmatter.spec_maturity || '').trim();
@@ -2913,7 +2945,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const m = maturityForSpec(spec);
         return `<span class="maturity-badge maturity-${escAttr(m.slug)}" data-level="${escAttr(m.level)}" title="Maturity: ${escAttr(m.label)}">${escHtml(m.label)}</span>`;
     }
-    const MATURITY_ORDER = ['Unassessed', 'Sketch', 'Draft', 'Specified', 'Buildable', 'Implemented', 'Released', 'Validated', 'Stable', 'Proven', 'Rework Needed'];
+    const MATURITY_ORDER = ['Unassessed', 'Sketch', 'Draft', 'Buildable', 'Implemented', 'Trial', 'Provisional', 'Validated', 'Stability Candidate', 'Stable', 'Rework Needed'];
     function maturityIndex(label) {
         const idx = MATURITY_ORDER.indexOf(label);
         return idx === -1 ? 99 : idx;
@@ -3662,23 +3694,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 label: 'Releases',
                 href: routeFor(section.slug, 'releases'),
             };
-            const schemaPage = {
-                key: 'schema',
-                label: 'Schema',
-                href: routeFor(section.slug, 'schema'),
-            };
             const tablePage = {
                 key: 'table',
                 label: 'Specs (table)',
                 href: routeFor(section.slug, 'table'),
             };
             const hasOverview = section.pages.some((p) => p.key === 'index');
+            const insightPages = [maturityPage, activityPage, workPage, pressurePage, releasesPage, specsPage, tablePage];
             if (hasOverview) {
-                section.pages.push(maturityPage, activityPage, workPage, pressurePage, releasesPage, schemaPage, specsPage, tablePage);
+                section.pages.push(...insightPages);
             }
             else {
                 // No Overview in this mode — Maturity becomes the section's entry page.
-                section.pages.unshift(maturityPage, activityPage, workPage, pressurePage, releasesPage, schemaPage, specsPage, tablePage);
+                section.pages.unshift(...insightPages);
             }
         }
     }
@@ -3944,6 +3972,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const items = buildInsightSpecs(specs);
         const activityCards = buildActivityCards(section);
         const headingPrefix = SINGLE_SOURCE_MODE ? '' : `${section.label} — `;
+        const insightBaseHref = SINGLE_SOURCE_MODE ? '' : `${section.slug}/`;
         const crumbsFor = (label) => renderBreadcrumbs([
             { label: 'Product Truth', href: 'index.html' },
             { label: section.label, href: routeFor(section.slug, 'index') },
@@ -3955,7 +3984,7 @@ document.addEventListener('DOMContentLoaded', function() {
       ${crumbsFor('Maturity')}
       <h1>${escHtml(`${headingPrefix}Maturity Map`)}</h1>
       <p class="subhead">How much the spec corpus is trusted as product truth. Missing maturity is shown as Unassessed, not as success.</p>
-      ${renderInsightCards(items)}
+      ${renderInsightCards(items, insightBaseHref)}
     </section>
     <section class="panel">
       <h2>Maturity heatmap</h2>
@@ -3979,7 +4008,7 @@ document.addEventListener('DOMContentLoaded', function() {
       ${crumbsFor('Activity Board')}
       <h1>${escHtml(`${headingPrefix}Activity Board`)}</h1>
       <p class="subhead">A kanban-style view of current work and backlog activity. It shows state, not permanent completeness.</p>
-      ${renderInsightCards(items)}
+      ${renderInsightCards(items, insightBaseHref)}
     </section>
     <section class="panel lens-root">
       <h2>Activity board</h2>
@@ -3995,7 +4024,7 @@ document.addEventListener('DOMContentLoaded', function() {
       ${crumbsFor('Known Work')}
       <h1>${escHtml(`${headingPrefix}Known Work`)}</h1>
       <p class="subhead">Known implementation/design work remaining in the corpus. Counts come from work rows, not estimated percent complete.</p>
-      ${renderInsightCards(items)}
+      ${renderInsightCards(items, insightBaseHref)}
     </section>
     <section class="panel lens-root">
       <h2>Most outstanding work</h2>
@@ -4011,7 +4040,7 @@ document.addEventListener('DOMContentLoaded', function() {
       ${crumbsFor('Backlog Pressure')}
       <h1>${escHtml(`${headingPrefix}Backlog Pressure`)}</h1>
       <p class="subhead">Unresolved decisions, dependencies, candidate enhancements, and other tracked pressure that has not necessarily become committed work.</p>
-      ${renderInsightCards(items)}
+      ${renderInsightCards(items, insightBaseHref)}
     </section>
     <section class="panel lens-root">
       <h2>Highest pressure specs</h2>
@@ -4027,7 +4056,7 @@ document.addEventListener('DOMContentLoaded', function() {
       ${crumbsFor('Releases')}
       <h1>${escHtml(`${headingPrefix}Release Lens`)}</h1>
       <p class="subhead">Target is intent. Delivered is historical fact. This view keeps both visible without treating either as maturity.</p>
-      ${renderInsightCards(items)}
+      ${renderInsightCards(items, insightBaseHref)}
     </section>
     <section class="panel">
       <h2>Release rows</h2>
@@ -4050,25 +4079,7 @@ document.addEventListener('DOMContentLoaded', function() {
     ${LENS_FILTER_SCRIPT}`;
         const releasePath = routeFor(section.slug, 'releases');
         writeFileSync(join(OUTPUT_DIR, releasePath), pageShell(`${headingPrefix}Release Lens`, sections, section.slug, 'releases', releaseBody, releasePath));
-        const schemaBody = `
-    <section class="hero">
-      <div class="eyebrow">Product Truth</div>
-      ${crumbsFor('Schema')}
-      <h1>${escHtml(`${headingPrefix}Schema`)}</h1>
-      <p class="subhead">The current human and agent-facing schema of the corpus: fields, vocabulary, and derived views.</p>
-      ${renderInsightCards(items)}
-    </section>
-    <section class="panel">
-      <h2>Governance signals</h2>
-      ${renderGovernancePanel(items)}
-    </section>
-    <section class="panel">
-      <h2>Relevant fields</h2>
-      ${renderSchemaReference()}
-    </section>`;
-        const schemaPath = routeFor(section.slug, 'schema');
-        writeFileSync(join(OUTPUT_DIR, schemaPath), pageShell(`${headingPrefix}Schema`, sections, section.slug, 'schema', schemaBody, schemaPath));
-        searchIndex.push({ title: `${headingPrefix}Maturity Map`, section: section.label, group: 'Product Truth', snippet: 'Maturity heatmap and area matrix.', url: maturityPath }, { title: `${headingPrefix}Activity Board`, section: section.label, group: 'Product Truth', snippet: 'Kanban-style activity view for work and backlog rows.', url: activityPath }, { title: `${headingPrefix}Known Work`, section: section.label, group: 'Product Truth', snippet: 'Outstanding known work by spec.', url: workPath }, { title: `${headingPrefix}Backlog Pressure`, section: section.label, group: 'Product Truth', snippet: 'Open backlog pressure by spec.', url: pressurePath }, { title: `${headingPrefix}Release Lens`, section: section.label, group: 'Product Truth', snippet: 'Target and delivered release facts.', url: releasePath }, { title: `${headingPrefix}Schema`, section: section.label, group: 'Product Truth', snippet: 'Relevant fields and vocabulary for the spec corpus.', url: schemaPath });
+        searchIndex.push({ title: `${headingPrefix}Maturity Map`, section: section.label, group: 'Product Truth', snippet: 'Maturity heatmap and area matrix.', url: maturityPath }, { title: `${headingPrefix}Activity Board`, section: section.label, group: 'Product Truth', snippet: 'Kanban-style activity view for work and backlog rows.', url: activityPath }, { title: `${headingPrefix}Known Work`, section: section.label, group: 'Product Truth', snippet: 'Outstanding known work by spec.', url: workPath }, { title: `${headingPrefix}Backlog Pressure`, section: section.label, group: 'Product Truth', snippet: 'Open backlog pressure by spec.', url: pressurePath }, { title: `${headingPrefix}Release Lens`, section: section.label, group: 'Product Truth', snippet: 'Target and delivered release facts.', url: releasePath });
     }
     for (const tableKey of ['subfeatures', 'backlog']) {
         const table = snapshot.tables[tableKey];
@@ -4688,6 +4699,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const rootInsightItems = buildInsightSpecs(allSpecs);
     const rootInsightBaseHref = SINGLE_SOURCE_MODE ? '' : 'portfolio/';
     const overallProgressPanel = renderDashboardConsole(rootInsightItems, rootInsightBaseHref);
+    const schemaBody = `
+  <section class="hero">
+    <div class="eyebrow">Product Truth</div>
+    ${renderBreadcrumbs([
+        { label: 'Product Truth', href: 'index.html' },
+        { label: 'Schema' },
+    ])}
+    <h1>Schema</h1>
+    <p class="subhead">The current human and agent-facing schema of the corpus: fields, vocabulary, and derived views.</p>
+    ${renderInsightCards(rootInsightItems, rootInsightBaseHref)}
+  </section>
+  <section class="panel">
+    <h2>Governance signals</h2>
+    ${renderGovernancePanel(rootInsightItems)}
+  </section>
+  <section class="panel">
+    <h2>Relevant fields</h2>
+    ${renderSchemaReference()}
+  </section>`;
+    writeFileSync(join(OUTPUT_DIR, 'schema.html'), pageShell('Schema', sections, 'root', 'schema', schemaBody, 'schema.html'));
+    searchIndex.push({
+        title: 'Schema',
+        section: 'Reference',
+        group: 'Product Truth',
+        snippet: 'Relevant fields and vocabulary for the spec corpus.',
+        url: 'schema.html',
+    });
     const rootSourceRows = snapshot.sources
         .map((source) => `
     <div class="source-row">
@@ -4715,7 +4753,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <a href="${rootInsightBaseHref}work.html">Known Work</a>
       <a href="${rootInsightBaseHref}pressure.html">Backlog Pressure</a>
       <a href="${rootInsightBaseHref}releases.html">Release Lens</a>
-      <a href="${rootInsightBaseHref}schema.html">Schema</a>
+      <a href="schema.html">Schema</a>
     </div>
   </section>
   ${overallProgressPanel}

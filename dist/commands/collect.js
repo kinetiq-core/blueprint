@@ -14,8 +14,8 @@ export async function collect(flags) {
             continue;
         }
         rmSync(mirrorRoot, { recursive: true, force: true });
-        const specsCount = copyFiltered(join(originRoot, 'docs', 'specs'), join(mirrorRoot, 'docs', 'specs'), () => true);
-        const devCount = copyFiltered(join(originRoot, 'docs', 'developers'), join(mirrorRoot, 'docs', 'developers'), (n) => n.startsWith('spec_'));
+        const specsCount = copyFiltered(join(originRoot, 'docs', 'specs'), join(mirrorRoot, 'docs', 'specs'), isSpecMarkdown);
+        const devCount = copyFiltered(join(originRoot, 'docs', 'developers'), join(mirrorRoot, 'docs', 'developers'), isSpecMarkdown);
         const count = specsCount + devCount;
         total += count;
         console.warn(`[collect] ${source.label}: synced ${count} files (${specsCount} specs, ${devCount} developers)`);
@@ -39,4 +39,7 @@ function copyFiltered(srcDir, destDir, filter) {
         }
     }
     return count;
+}
+function isSpecMarkdown(name) {
+    return name.startsWith('spec_');
 }

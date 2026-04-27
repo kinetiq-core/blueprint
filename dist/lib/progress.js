@@ -8,12 +8,14 @@ function classifySubfeatureStatus(value) {
     const v = stripDate(value).toLowerCase();
     if (!v)
         return null;
-    if (v === 'done' || v === 'implemented')
+    if (v === 'landed' || v === 'done' || v === 'implemented' || v === 'shipped')
         return 'shipped';
-    if (v === 'alpha' || v === 'started' || v === 'in progress')
+    if (v === 'active' || v === 'review' || v === 'in review' || v === 'alpha' || v === 'started' || v === 'in progress')
         return 'alpha';
-    if (v === 'planned' || v === 'open')
+    if (v === 'queued' || v === 'planned' || v === 'open')
         return 'planned';
+    if (v === 'blocked')
+        return 'alpha';
     if (v === 'deferred' || v === 'parked')
         return 'parked';
     return null;
@@ -24,9 +26,11 @@ function classifyBacklogStatus(value) {
         return null;
     if (v === 'done' || v === 'resolved' || v === 'closed')
         return 'shipped';
-    if (v === 'started' || v === 'in progress' || v === 'drafted')
+    if (v === 'active' || v === 'started' || v === 'in progress' || v === 'drafted')
         return 'alpha';
-    if (v === 'open' || v === 'triaged' || v === 'planned')
+    if (v === 'blocked')
+        return 'alpha';
+    if (v === 'open' || v === 'triaged' || v === 'queued' || v === 'planned')
         return 'planned';
     if (v === 'parked' || v === 'deferred')
         return 'parked';

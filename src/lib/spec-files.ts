@@ -30,6 +30,7 @@ export function collectSpecFiles(sourceId: string, rootPath: string): SpecFile[]
   const developersDir = join(rootPath, 'docs', 'developers')
 
   for (const file of walkMarkdown(specsDir, 'specs')) {
+    if (!isSpecMarkdown(basename(file.fullPath))) continue
     files.push({
       ...file,
       specPath: `${sourceId}/docs/${file.relPath.replace(/\\/g, '/')}`,
@@ -37,7 +38,7 @@ export function collectSpecFiles(sourceId: string, rootPath: string): SpecFile[]
   }
 
   for (const file of walkMarkdown(developersDir, 'developers')) {
-    if (!basename(file.fullPath).startsWith('spec_')) continue
+    if (!isSpecMarkdown(basename(file.fullPath))) continue
     files.push({
       ...file,
       specPath: `${sourceId}/docs/${file.relPath.replace(/\\/g, '/')}`,
@@ -45,4 +46,8 @@ export function collectSpecFiles(sourceId: string, rootPath: string): SpecFile[]
   }
 
   return files
+}
+
+function isSpecMarkdown(name: string): boolean {
+  return name.startsWith('spec_')
 }

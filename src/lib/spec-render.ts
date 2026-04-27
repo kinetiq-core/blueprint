@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs'
+import { existsSync, statSync, readFileSync } from 'fs'
 import { marked } from 'marked'
 import { dirname, isAbsolute, normalize, posix, resolve as resolvePath, sep } from 'path'
 
@@ -136,7 +136,9 @@ type ResolveResult =
   | { kind: 'external' }
   | { kind: 'fragment'; fragment: string }
   | { kind: 'spec'; spec: SpecMeta; fragment: string; href: string }
-  | { kind: 'unknown-file'; cleanedText: string }
+  | { kind: 'local-file'; cleanedText: string; displayHref: string }
+  | { kind: 'local-directory'; cleanedText: string }
+  | { kind: 'missing-file'; cleanedText: string }
 
 function splitFragment(href: string): { path: string; fragment: string } {
   const hashIdx = href.indexOf('#')
@@ -177,6 +179,20 @@ function translateOriginToMirror(absPath: string, sources: SourceHandle[]): stri
   return norm
 }
 
+function translateMirrorToOrigin(absPath: string, sources: SourceHandle[]): string {
+  const norm = normaliseFsPath(absPath)
+  for (const source of sources) {
+    if (!source.resolvedRoot || !source.originRoot) continue
+    const mirror = normaliseFsPath(source.resolvedRoot)
+    if (norm === mirror || norm.startsWith(mirror + '/')) {
+      const origin = normaliseFsPath(source.originRoot)
+      const tail = norm.slice(mirror.length)
+      return origin + tail
+    }
+  }
+  return norm
+}
+
 function tryResolveAbsoluteToSpec(absPath: string, index: SpecIndex): SpecMeta | null {
   const norm = normaliseFsPath(absPath)
   const direct = index.byAbsolutePath.get(norm)
@@ -188,29 +204,53 @@ function tryResolveAbsoluteToSpec(absPath: string, index: SpecIndex): SpecMeta |
   return null
 }
 
+function firstExistingPath(absPaths: string[], index: SpecIndex): string | null {
+  for (const absPath of absPaths) {
+    if (existsSync(absPath)) return absPath
+    const originPath = translateMirrorToOrigin(absPath, index.sources)
+    if (originPath !== normaliseFsPath(absPath) && existsSync(originPath)) return originPath
+  }
+  return null
+}
+
 function resolveHref(href: string, currentSpec: SpecMeta, index: SpecIndex): ResolveResult {
-  if (!href) return { kind: 'unknown-file', cleanedText: '' }
+  if (!href) return { kind: 'missing-file', cleanedText: '' }
   if (isExternalUrl(href)) return { kind: 'external' }
   if (href.startsWith('#')) return { kind: 'fragment', fragment: href }
 
   const { path: rawPath, fragment } = splitFragment(href)
   const decoded = decodeURIComponent(rawPath)
 
-  let absoluteCandidate: string | null = null
+  const absoluteCandidates: string[] = []
   if (/^[a-z]:[\\/]/i.test(decoded) || decoded.startsWith('/') || decoded.startsWith('\\')) {
-    absoluteCandidate = resolvePath(decoded)
+    absoluteCandidates.push(resolvePath(decoded))
   } else {
     const currentDir = dirname(currentSpec.fullPath)
-    absoluteCandidate = resolvePath(currentDir, decoded)
+    absoluteCandidates.push(resolvePath(currentDir, decoded))
+    const originCurrentPath = translateMirrorToOrigin(currentSpec.fullPath, index.sources)
+    if (originCurrentPath !== normaliseFsPath(currentSpec.fullPath)) {
+      absoluteCandidates.push(resolvePath(dirname(originCurrentPath), decoded))
+    }
   }
 
-  const target = tryResolveAbsoluteToSpec(absoluteCandidate, index)
-  if (target) {
-    return { kind: 'spec', spec: target, fragment, href: target.url }
+  for (const absoluteCandidate of absoluteCandidates) {
+    const target = tryResolveAbsoluteToSpec(absoluteCandidate, index)
+    if (target) {
+      return { kind: 'spec', spec: target, fragment, href: target.url }
+    }
   }
 
-  const cleaned = cleanAbsoluteForDisplay(absoluteCandidate, index.sources)
-  return { kind: 'unknown-file', cleanedText: cleaned }
+  const existingPath = firstExistingPath(absoluteCandidates, index)
+  if (existingPath) {
+    const stat = statSync(existingPath)
+    const existingCleaned = cleanAbsoluteForDisplay(existingPath, index.sources)
+    if (stat.isDirectory()) {
+      return { kind: 'local-directory', cleanedText: existingCleaned }
+    }
+    return { kind: 'local-file', cleanedText: existingCleaned, displayHref: href }
+  }
+  const cleaned = cleanAbsoluteForDisplay(absoluteCandidates[absoluteCandidates.length - 1] || absoluteCandidates[0] || '', index.sources)
+  return { kind: 'missing-file', cleanedText: cleaned }
 }
 
 function rewriteLinks(html: string, currentSpec: SpecMeta, index: SpecIndex, warnings: string[]): string {
@@ -225,7 +265,15 @@ function rewriteLinks(html: string, currentSpec: SpecMeta, index: SpecIndex, war
     if (result.kind === 'spec') {
       return `<a href="${escAttr(result.href)}${result.fragment}"${attrs}>${innerHtml}</a>`
     }
-    warnings.push(`unresolved link in ${currentSpec.specPath}: ${href}`)
+    if (result.kind === 'local-file') {
+      warnings.push(`non-rendered local file in ${currentSpec.specPath}: ${href} -> ${result.cleanedText}`)
+      return `<a href="${escAttr(result.displayHref)}"${attrs}>${innerHtml}</a>`
+    }
+    if (result.kind === 'local-directory') {
+      warnings.push(`non-rendered local directory in ${currentSpec.specPath}: ${href} -> ${result.cleanedText}`)
+      return innerHtml
+    }
+    warnings.push(`missing link target in ${currentSpec.specPath}: ${href} -> ${result.cleanedText}`)
     return innerHtml
   })
 }
